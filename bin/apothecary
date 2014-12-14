@@ -1,0 +1,4 @@
+#!/usr/bin/env ruby
+
+require 'apothecary'
+puts "Apothecary Version #{Apothecary::VERSION}"
