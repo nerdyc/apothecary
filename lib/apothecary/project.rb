@@ -1,6 +1,5 @@
 require 'fileutils'
 require 'apothecary/session'
-require 'apothecary/environment'
 require 'yaml'
 require 'pathname'
 
@@ -77,11 +76,22 @@ module Apothecary
     # ===== SESSIONS ===================================================================================================
 
     def default_session
-      @default_session ||= Session.new 'default', self
+      @default_session ||= Session.new(File.join(sessions_path, 'default'), self, context_names, {})
     end
 
     def sessions_path
       @sessions_path ||= File.join(path, 'sessions')
+    end
+
+    def session_with_contexts(*contexts)
+      contexts.flatten!
+      contexts += context_names
+
+      Session.new(nil, self, contexts, {})
+    end
+
+    def session_with_variables(variables)
+      Session.new(nil, self, context_names, variables)
     end
 
     # ===== CONTEXTS ===================================================================================================
@@ -132,32 +142,6 @@ module Apothecary
 
       File.open(variant_path, 'w') { |file| file << context_yaml }
       context_yaml
-    end
-
-    # ===== ENVIRONMENTS ===============================================================================================
-
-    def default_environment
-      Environment.new(default_environment_variables)
-    end
-
-    def environment_with_contexts(contexts)
-      Environment.new(environment_variables_with_contexts(contexts))
-    end
-
-    def default_environment_variables
-      variables = {}
-      context_names.each do |context_name|
-        variables.merge!(variables_for_context(context_name))
-      end
-      variables
-    end
-
-    def environment_variables_with_contexts(context_names)
-      variables = default_environment_variables
-      context_names.each do |context_name|
-        variables.merge!(variables_for_context(context_name))
-      end
-      variables
     end
 
   end

@@ -1,12 +1,26 @@
 require 'fileutils'
 require 'apothecary/request'
+require 'apothecary/context'
 
 module Apothecary
-  class Session
+  class Session < Context
 
-    def initialize(name, project)
-      @name = name
+    def initialize(directory_path, project, context_names, variables)
+      parent_contexts = []
+      @contexts = {}
+      context_names.each do |context_name|
+        parent_context = Context.new(project.variables_for_context(context_name))
+
+        parent_contexts << parent_context
+        @contexts[context_name] = parent_context
+      end
+
+      super(variables, parent_contexts)
+
+      @directory_path = directory_path
       @project = project
+      @context_names = context_names
+
       @requests = []
     end
 
@@ -16,18 +30,75 @@ module Apothecary
 
     # ===== NAME =======================================================================================================
 
-    attr_reader :name
+    attr_reader :directory_path
 
-    # ===== ENVIRONMENT ================================================================================================
-
-    def environment
-      project.default_environment
+    def name
+      File.basename(directory_path)
     end
-    alias env environment
+
+    # ===== CONTEXTS ===================================================================================================
+
+    attr_reader :context_names
+
+    # ===== URI ========================================================================================================
+
+    def base_url
+      uri_from_value(resolve('base_url'))
+    end
+
+    def uri_from_hash(components)
+      scheme  = components['scheme']
+      host    = components['host']
+      port    = components['port']
+      path    = components['path']
+
+      if host.nil?
+        port = nil
+      else
+        scheme ||= 'https'
+      end
+
+      uri_class = URI::Generic
+      if scheme == 'https'
+        uri_class = URI::HTTPS
+      elsif scheme == 'http'
+        uri_class = URI::HTTP
+      end
+
+      uri_class.build(scheme: scheme,
+                      host:   host,
+                      port:   port,
+                      path:   path)
+    end
+
+    def uri_from_value(url_value)
+      if url_value.kind_of? URI
+        url_value
+      elsif url_value.kind_of? Hash
+        uri_from_hash(url_value)
+      elsif url_value.kind_of? String
+        URI(url_value)
+      end
+    end
+
+    def resolve_uri(uri)
+      uri_value = uri_from_value(uri)
+
+      base_url_value = base_url
+      unless base_url_value.nil?
+        uri_value = URI.join(base_url_value, uri_value)
+      end
+
+      uri_value
+    end
 
     # ===== REQUESTS ===================================================================================================
 
     attr_reader :requests
+
+    def requests_path
+      @requests_path ||= File.join(directory_path, 'requests')
+    end
 
     def request_count
       requests.count
@@ -41,13 +112,15 @@ module Apothecary
             project.request_named!(request_name)
           end
 
-      environment.interpolate(request_data)
+
+      interpolated_data = interpolate(request_data.reject { |key| Request::UNINTERPOLATED_KEYS.include?(key.to_s) })
+      request_data.merge(interpolated_data)
     end
 
     def build_request!(request_name)
       interpolated_data = interpolate_request!(request_name)
 
-      uri = environment.resolve_uri(interpolated_data)
+      uri = resolve_uri(interpolated_data)
 
       Request.new((request_count+1).to_s,
                   request_name,
@@ -60,19 +133,17 @@ module Apothecary
       request = build_request!(request_name)
       request.send!
 
+      output = request.output(self)
+      if output
+        variables.merge!(output)
+      end
+
       @requests << request
+      request
     end
 
     def total_received
       requests.inject(0) { |total_received, response| total_received + response.content_length }
-    end
-
-    def directory_path
-      @directory_path ||= File.join(project.sessions_path, name)
-    end
-
-    def requests_path
-      @requests_path ||= File.join(directory_path, 'requests')
     end
 
   end

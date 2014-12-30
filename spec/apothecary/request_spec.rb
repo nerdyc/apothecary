@@ -183,6 +183,36 @@ describe 'Apothecary::Request' do
 
   end
 
+  # ===== OUTPUT =======================================================================================================
 
+  context 'when a request has outputs' do
+
+    let(:request) { Apothecary::Request.new("abc123",
+                                            "messages/post",
+                                            "https://api.communique.dev/messages",
+                                            {
+                                                'method' => 'POST',
+                                                'outputs' => {
+                                                    'latest_message_timestamp' => '{{message.timestamp_in_ms}}',
+                                                }
+                                            },
+                                            Dir.mktmpdir('apothecarySpecs')) }
+
+    it "collects the output from the response" do
+      stub_request(:post, "https://api.communique.dev/messages")
+          .to_return(status: 200,
+                     body: JSON.generate('message' => {
+                                             'id' => 123,
+                                             'text' => 'Hello, World!',
+                                             'timestamp_in_ms' => 123456
+                                         }),
+                     headers: { 'Content-Type' => 'application/json' })
+
+      request.send!
+
+      expect(request.output).to eq('latest_message_timestamp' => 123456)
+    end
+
+  end
 
 end

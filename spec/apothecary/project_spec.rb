@@ -61,10 +61,34 @@ describe 'Apothecary::Project' do
 
   describe '#default_session' do
 
+    let(:default_session) { project.default_session }
+
     it 'returns the default session' do
-      expect(project.default_session).not_to be_nil
-      expect(project.default_session.name).to eq('default')
-      expect(project.default_session).to equal(project.default_session)
+      expect(default_session).not_to be_nil
+      expect(default_session.name).to eq('default')
+      expect(default_session).to equal(project.default_session)
+
+      expect(default_session.context_names).to eq(%w[api client server])
+      expect(default_session.evaluate("server")).to eq("server default")
+      expect(default_session.evaluate("client")).to eq("client default")
+      expect(default_session.evaluate("api")).to eq("api default")
+    end
+
+  end
+
+  describe "#session_with_contexts" do
+
+    let(:session_with_contexts) {
+      project.session_with_contexts(%w[server/alternate client])
+    }
+
+    it 'returns a session with the given contexts' do
+      expect(session_with_contexts).not_to be_nil
+      expect(session_with_contexts.evaluate("server")).to eq("server alternate")
+      expect(session_with_contexts.evaluate("client")).to eq("client default")
+
+      # default contexts are still included even when not listed
+      expect(session_with_contexts.evaluate("api")).to eq("api default")
     end
 
   end
@@ -95,47 +119,6 @@ describe 'Apothecary::Project' do
 
     it 'returns the names of all contexts in the project' do
       expect(project.context_names.sort).to eq(%w[api client server])
-    end
-
-  end
-
-  # ===== ENVIRONMENTS =================================================================================================
-
-  describe '#default_environment_variables' do
-
-    it 'returns default envionment variables' do
-      expect(project.default_environment_variables).to eq({ "server" => "server default",
-                                                            "client" => "client default",
-                                                            "api"    => "api default"})
-    end
-
-  end
-
-
-  describe '#default_environment' do
-
-    it 'returns an environment composed of all default contexts' do
-      default_environment = project.default_environment
-      expect(default_environment).not_to be_nil
-
-      expect(default_environment.evaluate("server")).to eq("server default")
-      expect(default_environment.evaluate("client")).to eq("client default")
-      expect(default_environment.evaluate("api")).to eq("api default")
-    end
-
-  end
-
-  describe '#environment_with_contexts' do
-
-    it 'returns a new environment composed of the given contexts' do
-      default_environment = project.environment_with_contexts(%w[server/alternate client])
-      expect(default_environment).not_to be_nil
-
-      expect(default_environment.evaluate("server")).to eq("server alternate")
-      expect(default_environment.evaluate("client")).to eq("client default")
-
-      # default contexts are still included even when not listed
-      expect(default_environment.evaluate("api")).to eq("api default")
     end
 
   end

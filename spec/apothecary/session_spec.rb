@@ -4,11 +4,92 @@ describe 'Apothecary::Session' do
 
   let(:root) { Dir.mktmpdir('apothecarySpecs') }
   let(:project) { Apothecary::Project.new(root) }
-  let(:session) { project.default_session }
+
+  # ===== URI ==========================================================================================================
+
+  describe "#uri_from_value" do
+
+    let(:session) { project.session_with_variables('base_url' => 'http://api.communique.dev',
+                                                   'email' => 'amelia@communique.dev',
+                                                   'given_name' => 'Amelia',
+                                                   'family_name' => 'Grey',
+                                                   'labels' => %w[friend foe],
+                                                   'company' => {
+                                                       'name' => 'Communiqué',
+                                                       'url' => 'http://communique.dev'
+                                                   })
+    }
+
+    context "when provided a string" do
+
+      it 'returns the parsed URI' do
+        uri = URI.parse("http://api.communique.dev/groups")
+        expect(session.uri_from_value("http://api.communique.dev/groups")).to eq(uri)
+      end
+
+    end
+
+    context "when provided a URI" do
+
+      it 'returns the same URI' do
+        uri = URI.parse("http://api.communique.dev/groups")
+        expect(session.uri_from_value(uri)).to equal(uri)
+      end
+
+    end
+
+    context "when provided a hash" do
+
+      it 'constructs a URI from a hash of values' do
+        absolute_uri = session.uri_from_hash('scheme' => 'https',
+                                             'host'   => 'some-api.communique.dev',
+                                             'port'   => 4321,
+                                             'path'   => '/messages')
+
+        expect(absolute_uri).to eq(URI.parse('https://some-api.communique.dev:4321/messages'))
+
+        relative_uri = session.uri_from_value('path'   => '/messages')
+        expect(relative_uri).to eq(URI.parse('/messages'))
+      end
+
+      it 'defaults to https if host given, but no scheme' do
+        uri = session.uri_from_value('host'   => 'some-api.communique.dev',
+                                     'path'   => '/messages')
+
+        expect(uri).to eq(URI.parse('https://some-api.communique.dev/messages'))
+      end
+    end
+
+  end
+
+  describe "#resolve_uri" do
+
+    context 'when a base url is defined' do
+
+      it 'resolves the uri against the base URL' do
+        e = project.session_with_variables('base_url' => 'http://api.communique.dev/v2/')
+        expect(e.resolve_uri("messages/unread")).to eq(URI.parse('http://api.communique.dev/v2/messages/unread'))
+
+      end
+
+    end
+
+    context 'when a base url is not defined' do
+
+      it 'resolves the uri against the base URL' do
+        e = project.session_with_variables({})
+        expect(e.resolve_uri("messages/unread")).to eq(URI.parse('messages/unread'))
+      end
+
+    end
+
+  end
 
   # ===== REQUESTS =====================================================================================================
 
   describe '#perform_request!' do
+
+    let(:session) { project.default_session }
 
     context 'when the request exists' do
 
@@ -77,15 +158,19 @@ describe 'Apothecary::Session' do
                                 :first_name => 'Amelia',
                                 :last_name => 'Grey',
                                 :photo_url => 'https://api.communique.dev/content/photo.jpeg' }
-                             ))
+                             ),
+                       headers: {
+                           'Content-Type' => 'application/json'
+                       })
 
-        session.perform_request!('scheme' => 'https',
+        r = session.perform_request!('scheme' => 'https',
                                  'host' => 'api.communique.dev',
                                  'path' => '/profile',
-                                 'output' => {
+                                 'outputs' => {
                                      'user_photo_url' => '{{profile.photo_url}}'
                                  })
 
+#        expect(r.response_json).to be_nil
         expect(session.evaluate('user_photo_url')).to eq('https://api.communique.dev/content/photo.jpeg')
       end
 

@@ -4,6 +4,8 @@ require 'json'
 module Apothecary
   class Request
 
+    UNINTERPOLATED_KEYS = %w[outputs]
+
     attr_reader :identifier
     attr_reader :name
     attr_reader :request_uri
@@ -91,12 +93,50 @@ module Apothecary
 
       http_response, *http_headers = curl.header_str.split(/[\r\n]+/).map(&:strip)
       @response_headers = Hash[http_headers.flat_map{ |s| s.scan(/^(\S+): (.+)/) }]
+      @response_body = curl.body_str
     end
+
+    # ===== RESPONSE ===================================================================================================
+
+    # ----- HEADERS ----------------------------------------------------------------------------------------------------
 
     attr_reader :response_headers
 
     def content_length
       (response_headers['Content-Length'] || '0').to_i
+    end
+
+    def response_content_type
+      response_headers['Content-Type']
+    end
+
+    def response_is_json?
+      response_content_type && (response_content_type == 'application/json' || response_content_type.end_with?('+json'))
+    end
+
+    # ----- BODY -------------------------------------------------------------------------------------------------------
+
+    attr_reader :response_body
+
+    def response_json
+      JSON.parse(response_body) if response_is_json?
+    end
+
+    # ===== OUTPUT =====================================================================================================
+
+    def output(*parent_contexts)
+      request_context = Context.new(response_json,
+                                    parent_contexts.flatten)
+
+      output_definition = data['outputs']
+
+      if output_definition
+        output_values = {}
+        output_definition.each do |output_name, definition|
+          output_values[output_name] = request_context.interpolate(definition)
+        end
+        output_values
+      end
     end
 
   end

@@ -1,5 +1,5 @@
 require 'apothecary/version'
 require 'apothecary/project'
-require 'apothecary/environment'
+require 'apothecary/context'
 require 'apothecary/session'
 require 'apothecary/request'
