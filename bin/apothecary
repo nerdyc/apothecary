@@ -1,4 +1,6 @@
 #!/usr/bin/env ruby
 
 require 'apothecary'
-puts "Apothecary Version #{Apothecary::VERSION}"
+require 'apothecary/cli'
+
+Apothecary::CLI.start ARGV

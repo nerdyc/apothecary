@@ -1,4 +1,5 @@
-require "apothecary/version"
-
-module Apothecary
-end
+require 'apothecary/version'
+require 'apothecary/project'
+require 'apothecary/environment'
+require 'apothecary/session'
+require 'apothecary/request'
