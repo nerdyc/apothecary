@@ -20,14 +20,15 @@ module Apothecary
     end
 
     desc 'request ENDPOINT_NAME', 'Make a request to an endpoint'
+    option :session, :default => "default"
     def request(request_name)
-      project.default_session.perform_request!(request_name)
+      session.perform_request!(request_name)
     end
 
     desc 'interpolate_request ENDPOINT_NAME', 'Prints request meta-data used to make a request'
+    option :session, :default => "default"
     def interpolate_request(request_name)
-      request_data = project.default_session.interpolate_request!(request_name)
-
+      request_data = session.interpolate_request!(request_name)
       puts JSON.pretty_generate(request_data)
     end
 
@@ -70,6 +71,15 @@ module Apothecary
 
     def project
       @project ||= Project.new(project_path)
+    end
+
+    def session
+      @session =
+          if options[:session] == 'default' && !project.session_names.include?('default')
+            project.create_session('default')
+          else
+            project.open_session(options[:session])
+          end
     end
 
   end
