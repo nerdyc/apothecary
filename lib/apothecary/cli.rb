@@ -1,6 +1,8 @@
 require 'thor'
 require 'apothecary'
 require 'json'
+require 'rack'
+require 'apothecary/web'
 
 module Apothecary
   class CLI < Thor
@@ -27,6 +29,13 @@ module Apothecary
       request_data = project.default_session.interpolate_request!(request_name)
 
       puts JSON.pretty_generate(request_data)
+    end
+
+    # ===== SERVER =====================================================================================================
+
+    desc 'server', 'Starts the Apothecary web-server interface'
+    def server
+      Rack::Handler::WEBrick.run Apothecary::WebApp
     end
 
     # ===== PROJECT ====================================================================================================
