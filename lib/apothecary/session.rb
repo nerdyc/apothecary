@@ -120,14 +120,25 @@ module Apothecary
 
     # ===== REQUESTS ===================================================================================================
 
-    attr_reader :requests
-
     def requests_path
       @requests_path ||= File.join(directory_path, 'requests')
     end
 
+    def request_identifiers
+      Dir[File.join(requests_path, '*')].select { |request_path| File.directory?(request_path) }
+                                        .map { |request_path| File.basename(request_path) }
+    end
+
     def request_count
-      requests.count
+      request_identifiers.count
+    end
+
+    def last_request_identifier
+      request_identifiers.max_by { |request_identifier| request_identifier.to_i }
+    end
+
+    def next_request_number
+      (last_request_identifier || '0').to_i + 1
     end
 
     def interpolate_request!(request_name)
@@ -138,7 +149,6 @@ module Apothecary
             project.request_named!(request_name)
           end
 
-
       interpolated_data = interpolate(request_data.reject { |key| Request::UNINTERPOLATED_KEYS.include?(key.to_s) })
       request_data.merge(interpolated_data)
     end
@@ -148,11 +158,14 @@ module Apothecary
 
       uri = resolve_uri(interpolated_data)
 
-      Request.new((request_count+1).to_s,
-                  request_name,
+      request_path =
+        if request_name.kind_of? String
+          File.join(requests_path, "#{next_request_number}_#{request_name.gsub(/\W/, '_')}")
+        end
+
+      Request.new(request_path,
                   uri,
-                  interpolated_data,
-                  requests_path)
+                  interpolated_data)
     end
 
     def perform_request!(request_name)
@@ -164,12 +177,7 @@ module Apothecary
         variables.merge!(output)
       end
 
-      @requests << request
       request
-    end
-
-    def total_received
-      requests.inject(0) { |total_received, response| total_received + response.content_length }
     end
 
     # ===== FLOWS ======================================================================================================

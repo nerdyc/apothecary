@@ -130,11 +130,6 @@ describe 'Apothecary::Session' do
         expect(WebMock).to have_requested(:post, 'https://api.communique.dev/messages')
       end
 
-      it 'updates request statistics' do
-        expect(session.request_count).to eq(1)
-        expect(session.total_received).to eq(2)
-      end
-
       # Note:
       # Testing that the request and response are written to disk proved difficult/impossible since the implementation
       # depends on curb/libcurl callbacks that aren't fired when mocked.

@@ -5,16 +5,15 @@ describe 'Apothecary::Request' do
   let(:request_identifier) { "abc123" }
   let(:request_name) { "test/request" }
   let(:requests_path) { Dir.mktmpdir("apothecary_request") }
+  let(:directory_path) { File.join(requests_path, "123_test_request") }
 
   # ===== REQUEST METHODS ==============================================================================================
 
   context "when the 'method' is GET" do
 
-    let(:request) { Apothecary::Request.new(request_identifier,
-                                            request_name,
+    let(:request) { Apothecary::Request.new(directory_path,
                                             "https://api.communique.dev/messages",
-                                            { 'method' => 'GET' },
-                                            requests_path) }
+                                            { 'method' => 'GET' }) }
 
     before(:each) do
       stub_request(:get, "https://api.communique.dev/messages")
@@ -33,11 +32,8 @@ describe 'Apothecary::Request' do
 
   context "when the 'method' is omitted" do
 
-    let(:request) { Apothecary::Request.new(request_identifier,
-                                            request_name,
-                                            "https://api.communique.dev/messages",
-                                            { },
-                                            requests_path) }
+    let(:request) { Apothecary::Request.new(directory_path,
+                                            "https://api.communique.dev/messages") }
 
 
 
@@ -52,8 +48,7 @@ describe 'Apothecary::Request' do
     context 'with a json_body value' do
 
       let(:request) {
-        Apothecary::Request.new(request_identifier,
-                                request_name,
+        Apothecary::Request.new(directory_path,
                                 "https://api.communique.dev/messages",
                                 {
                                     'method' => 'POST',
@@ -61,8 +56,7 @@ describe 'Apothecary::Request' do
                                       'type' => 'text',
                                       'text' => 'Hello, World!'
                                     }
-                                },
-                                requests_path)
+                                })
       }
 
       before(:each) do
@@ -90,8 +84,7 @@ describe 'Apothecary::Request' do
     context 'with a json_body value' do
 
       let(:request) {
-        Apothecary::Request.new(request_identifier,
-                                request_name,
+        Apothecary::Request.new(directory_path,
                                 "https://api.communique.dev/messages",
                                 {
                                     'method' => 'PUT',
@@ -99,8 +92,7 @@ describe 'Apothecary::Request' do
                                         'type' => 'text',
                                         'text' => 'Hello, World!'
                                     }
-                                },
-                                requests_path)
+                                })
       }
 
       before(:each) do
@@ -127,16 +119,14 @@ describe 'Apothecary::Request' do
 
   context 'when headers are present' do
 
-    let(:request) { Apothecary::Request.new("abc123",
-                                            "messages",
+    let(:request) { Apothecary::Request.new(directory_path,
                                             "https://api.communique.dev/messages",
                                             {
                                                 'headers' => {
                                                     'User-Agent' => 'Apothecary',
                                                     'X-Greek' => %w[Alpha Beta]
                                                 }
-                                            },
-                                            Dir.mktmpdir('apothecarySpecs')) }
+                                            }) }
 
     before(:each) do
       stub_request(:get,
@@ -156,14 +146,12 @@ describe 'Apothecary::Request' do
 
   context 'when authorization data is present' do
 
-    let(:request) { Apothecary::Request.new("abc123",
-                                            "messages/secret",
+    let(:request) { Apothecary::Request.new(directory_path,
                                             "https://api.communique.dev/messages/secret",
                                             {
                                                 'username' => 'edith@communique.dev',
                                                 'password' => 'abcdef123456'
-                                            },
-                                            Dir.mktmpdir('apothecarySpecs')) }
+                                            }) }
 
     it 'has a username and password' do
       expect(request.username).to eq('edith@communique.dev')
@@ -187,16 +175,14 @@ describe 'Apothecary::Request' do
 
   context 'when a request has outputs' do
 
-    let(:request) { Apothecary::Request.new("abc123",
-                                            "messages/post",
+    let(:request) { Apothecary::Request.new(directory_path,
                                             "https://api.communique.dev/messages",
                                             {
                                                 'method' => 'POST',
                                                 'outputs' => {
                                                     'latest_message_timestamp' => '{{message.timestamp_in_ms}}',
                                                 }
-                                            },
-                                            Dir.mktmpdir('apothecarySpecs')) }
+                                            }) }
 
     it "collects the output from the response" do
       stub_request(:post, "https://api.communique.dev/messages")

@@ -6,18 +6,18 @@ module Apothecary
 
     UNINTERPOLATED_KEYS = %w[outputs]
 
-    attr_reader :identifier
-    attr_reader :name
+    attr_reader :path
     attr_reader :request_uri
     attr_reader :data
-    attr_reader :requests_path
 
-    def initialize(identifier, name, request_uri, data, requests_path)
-      @identifier = identifier
-      @name = name
+    def initialize(path, request_uri, data = {})
+      @path = path
       @request_uri = request_uri
       @data = data
-      @requests_path = requests_path
+    end
+
+    def id
+      File.basename(path).to_i
     end
 
     def request_method
@@ -41,28 +41,35 @@ module Apothecary
     end
 
     def request_dump_path
-      request_part = name.gsub(/\W/, '-')
-      File.join(requests_path, "#{identifier}-Request-#{request_part}.txt")
+      File.join(path, "request.txt") unless path.nil?
     end
 
     def response_dump_path
-      request_part = name.gsub(/\W/, '-')
-      File.join(requests_path, "#{identifier}-Response-#{request_part}.txt")
+      File.join(path, "response.txt") unless path.nil?
+    end
+
+    def data_dump_path
+      File.join(path, "data.yaml") unless path.nil?
     end
 
     def send!
-      FileUtils.mkdir_p(requests_path)
+      unless path.nil?
+        FileUtils.mkdir_p(path)
+        File.open(data_dump_path, 'w') { |f| f << YAML.dump(data)}
+      end
 
       curl = Curl::Easy.new(request_uri.to_s)
       curl.headers = request_headers
-      curl.on_debug do |type, data|
-        if type == Curl::CURLINFO_HEADER_OUT || type == Curl::CURLINFO_DATA_OUT
-          File.open(request_dump_path, 'a') do |f|
-            f << data
-          end
-        elsif type == Curl::CURLINFO_HEADER_IN || type == Curl::CURLINFO_DATA_IN
-          File.open(response_dump_path, 'a') do |f|
-            f << data
+      unless path.nil?
+        curl.on_debug do |type, data|
+          if type == Curl::CURLINFO_HEADER_OUT || type == Curl::CURLINFO_DATA_OUT
+            File.open(request_dump_path, 'a') do |f|
+              f << data
+            end
+          elsif type == Curl::CURLINFO_HEADER_IN || type == Curl::CURLINFO_DATA_IN
+            File.open(response_dump_path, 'a') do |f|
+              f << data
+            end
           end
         end
       end

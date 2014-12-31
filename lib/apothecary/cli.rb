@@ -32,6 +32,17 @@ module Apothecary
       puts JSON.pretty_generate(request_data)
     end
 
+    desc 'list-requests', "Lists requests made within a session"
+    option :session, :default => "default"
+    def list_requests
+      puts "# Session Requests"
+      puts
+      session.request_identifiers.each do |request_identifier|
+        puts "* #{request_identifier}"
+      end
+      puts
+    end
+
     # ===== SESSIONS ===================================================================================================
 
     desc 'sessions', 'List sessions in the project'
