@@ -7,12 +7,9 @@ module Apothecary
 
     def initialize(directory_path, project, context_names, variables)
       parent_contexts = []
-      @contexts = {}
-      context_names.each do |context_name|
+      (context_names + project.context_names).uniq.each do |context_name|
         parent_context = Context.new(project.variables_for_context(context_name))
-
         parent_contexts << parent_context
-        @contexts[context_name] = parent_context
       end
 
       super(variables, parent_contexts)
@@ -39,6 +36,35 @@ module Apothecary
     # ===== CONTEXTS ===================================================================================================
 
     attr_reader :context_names
+
+    # ===== PERSISTENCE ================================================================================================
+
+    def configuration_path
+      File.join(directory_path, 'config.yaml')
+    end
+
+    def save!
+      raise "Cannot save a temporary session!" if directory_path.nil?
+
+      FileUtils.mkdir_p(directory_path)
+      File.open(configuration_path, 'w') { |f| f << YAML.dump('contexts' => context_names,
+                                                              'variables' => variables) }
+    end
+
+    def self.load!(directory_path, project)
+      raise "Session not found at path: #{sessions_path}" unless File.directory?(directory_path)
+
+      config_path = File.join(directory_path, 'config.yaml')
+      contexts = []
+      variables = {}
+      if File.exists?(config_path)
+        configuration = YAML.load(File.read(config_path))
+        contexts = configuration['contexts']
+        variables = configuration['variables']
+      end
+
+      Session.new(directory_path, project, contexts, variables)
+    end
 
     # ===== URI ========================================================================================================
 

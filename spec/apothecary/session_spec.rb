@@ -163,17 +163,47 @@ describe 'Apothecary::Session' do
                            'Content-Type' => 'application/json'
                        })
 
-        r = session.perform_request!('scheme' => 'https',
+        session.perform_request!('scheme' => 'https',
                                  'host' => 'api.communique.dev',
                                  'path' => '/profile',
                                  'outputs' => {
                                      'user_photo_url' => '{{profile.photo_url}}'
                                  })
 
-#        expect(r.response_json).to be_nil
         expect(session.evaluate('user_photo_url')).to eq('https://api.communique.dev/content/photo.jpeg')
       end
 
+    end
+
+  end
+
+  # ===== PERSISTENCE ==================================================================================================
+
+  describe '#save!' do
+
+    before(:each) do
+      project.write_context_yaml 'api', <<-YAML
+          base_url: https://api.communique.dev
+          message: Hello, World!
+          user_agent: Apothecary
+      YAML
+
+      project.write_context_yaml 'api/staging', <<-YAML
+          base_url: https://staging.communique.dev
+          message: Hello, Test!
+      YAML
+
+      session.variables.merge!('token' => 'abc123')
+      session.save!
+    end
+
+    let(:session) { project.create_session('my_session',
+                                           contexts:%w[api/staging]) }
+
+    it "writes the session data to disk" do
+      expect(File.exists?(session.configuration_path)).to be_truthy
+      expect(YAML.load(File.read(session.configuration_path))).to eq('contexts' => %w[api/staging],
+                                                                     'variables' => { 'token' => 'abc123' })
     end
 
   end

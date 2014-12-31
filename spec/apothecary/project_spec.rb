@@ -59,6 +59,50 @@ describe 'Apothecary::Project' do
 
   # ===== SESSIONS =====================================================================================================
 
+  describe '#create_session' do
+
+    let(:session) { project.create_session('jam_session',
+                                           contexts: %w[api/alternate],
+                                           variables: {
+                                               'a' => 1,
+                                               'b' => 2
+                                           }) }
+
+    it "should create a session directory" do
+      expect(session.configuration_path).to_not be_nil
+      expect(File.exists?(session.configuration_path)).to be_truthy
+
+      expect(YAML.load(File.read(session.configuration_path))).to eq({'contexts' => %w[api/alternate],
+                                                                      'variables' => {
+                                                                          'a' => 1,
+                                                                          'b' => 2
+                                                                        }
+                                                                      })
+    end
+
+  end
+
+  describe "#open_session" do
+
+    before(:each) do
+      project.create_session('jelly_session',
+                             contexts: %w[server/alternate],
+                             variables: {
+                                 'a' => 1,
+                                 'b' => 2
+                             })
+    end
+
+    it "should load the session from disk" do
+      session = project.open_session('jelly_session')
+      expect(session).not_to be_nil
+      expect(session.context_names).to eq(%w[server/alternate])
+      expect(session.variables).to eq('a' => 1,
+                                      'b' => 2)
+    end
+
+  end
+
   describe '#default_session' do
 
     let(:default_session) { project.default_session }
@@ -68,7 +112,7 @@ describe 'Apothecary::Project' do
       expect(default_session.name).to eq('default')
       expect(default_session).to equal(project.default_session)
 
-      expect(default_session.context_names).to eq(%w[api client server])
+      expect(default_session.context_names).to eq(%w[])
       expect(default_session.evaluate("server")).to eq("server default")
       expect(default_session.evaluate("client")).to eq("client default")
       expect(default_session.evaluate("api")).to eq("api default")

@@ -75,8 +75,25 @@ module Apothecary
 
     # ===== SESSIONS ===================================================================================================
 
+    def create_session(name, options = {})
+      contexts = (options['contexts'] || options[:contexts] || [])
+      variables = (options['variables'] || options[:variables] || {})
+
+      session = Session.new(File.join(sessions_path, name),
+                            self,
+                            contexts,
+                            variables)
+      session.save!
+      session
+    end
+
+    def open_session(name)
+      session_path = File.join(sessions_path, name)
+      Session.load!(session_path, self)
+    end
+
     def default_session
-      @default_session ||= Session.new(File.join(sessions_path, 'default'), self, context_names, {})
+      @default_session ||= Session.new(File.join(sessions_path, 'default'), self, [], {})
     end
 
     def sessions_path
@@ -85,13 +102,12 @@ module Apothecary
 
     def session_with_contexts(*contexts)
       contexts.flatten!
-      contexts += context_names
 
       Session.new(nil, self, contexts, {})
     end
 
     def session_with_variables(variables)
-      Session.new(nil, self, context_names, variables)
+      Session.new(nil, self, [], variables)
     end
 
     # ===== CONTEXTS ===================================================================================================
