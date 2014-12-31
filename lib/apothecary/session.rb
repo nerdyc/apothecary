@@ -58,7 +58,7 @@ module Apothecary
       environment_names = []
       variables = {}
       if File.exists?(config_path)
-        configuration = YAML.load(File.read(config_path))
+        configuration = YAML.load_file config_path
         environment_names = configuration['environments']
         variables = configuration['variables']
       end

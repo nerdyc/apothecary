@@ -43,10 +43,18 @@ module Apothecary
       end
     end
 
+    desc 'create-session SESSION-NAME environments', "Create a session"
+    def create_session(session_name, *env_names)
+      session = project.create_session(session_name, *env_names)
+
+      puts "Created session at #{session.directory_path}"
+    end
+
     # ===== SERVER =====================================================================================================
 
     desc 'server', 'Starts the Apothecary web-server interface'
     def server
+      Apothecary::WebApp.project_path = project_path
       Rack::Handler::WEBrick.run Apothecary::WebApp
     end
 
@@ -56,8 +64,12 @@ module Apothecary
 
     protected
 
+    def project_path
+      options[:project] || Dir.pwd
+    end
+
     def project
-      @project ||= Project.new(options[:project] || Dir.pwd)
+      @project ||= Project.new(project_path)
     end
 
   end

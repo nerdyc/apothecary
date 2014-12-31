@@ -1,0 +1,24 @@
+.container
+  %h1= session.name
+
+  %h2 Session Variables
+  %table.table.table-condensed.table-hover.table-bordered
+    %tbody
+      - session.variables.each do |variable_name, value|
+        %tr
+          %th= variable_name
+          %td= value.to_json
+
+  %h2 Environment Variables
+  %table.table.table-condensed.table-hover.table-bordered
+    - (session.environment_names + project.environment_names).uniq.each do |env_name|
+      %thead
+        %tr.active
+          %th{colspan:2}= env_name
+      %tbody
+        - env_variables = project.variables_for_environment(env_name)
+        - env_variables.each do |variable_name, value|
+          %tr
+            %th= variable_name
+            %td
+              %code= value.to_json

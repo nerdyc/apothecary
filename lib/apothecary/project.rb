@@ -18,6 +18,10 @@ module Apothecary
 
     attr_reader :path
 
+    def name
+      File.basename(path)
+    end
+
     def create_skeleton
       FileUtils.mkdir_p path
       FileUtils.mkdir_p requests_path
@@ -45,7 +49,7 @@ module Apothecary
     def request_named(request_name)
       request_file_path = request_file_path_from_name(request_name)
       if File.exists? request_file_path
-        YAML.load(File.read(request_file_path))
+        YAML.load_file request_file_path
       end
     end
 
@@ -146,7 +150,7 @@ module Apothecary
     def variables_for_environment(environment_or_variant_name)
       variant_path = variant_path_for_environment(environment_or_variant_name)
       if File.exists?(variant_path)
-        YAML.load(File.read(variant_path))
+        YAML.load_file variant_path
       else
         {}
       end
@@ -183,14 +187,13 @@ module Apothecary
     def flow_named(flow_name)
       flow_file_path = flow_file_path_from_name(flow_name)
       if File.exists? flow_file_path
-        YAML.load(File.read(flow_file_path))
+        YAML.load_file flow_file_path
       end
     end
 
     def flow_named!(flow_name)
       flow_named(flow_name) || raise("Unknown flow: #{flow_name}")
     end
-
 
     def write_flow_yaml(flow_name, flow_yaml)
       flow_path = flow_file_path_from_name(flow_name)
