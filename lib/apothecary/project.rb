@@ -21,7 +21,7 @@ module Apothecary
     def create_skeleton
       FileUtils.mkdir_p path
       FileUtils.mkdir_p requests_path
-      FileUtils.mkdir_p contexts_path
+      FileUtils.mkdir_p environments_path
       FileUtils.mkdir_p sessions_path
     end
 
@@ -76,12 +76,12 @@ module Apothecary
     # ===== SESSIONS ===================================================================================================
 
     def create_session(name, options = {})
-      contexts = (options['contexts'] || options[:contexts] || [])
+      environment_names = (options['environments'] || options[:environments] || [])
       variables = (options['variables'] || options[:variables] || {})
 
       session = Session.new(File.join(sessions_path, name),
                             self,
-                            contexts,
+                            environment_names,
                             variables)
       session.save!
       session
@@ -100,31 +100,31 @@ module Apothecary
       @sessions_path ||= File.join(path, 'sessions')
     end
 
-    def session_with_contexts(*contexts)
-      contexts.flatten!
+    def session_with_environments(*environments)
+      environments.flatten!
 
-      Session.new(nil, self, contexts, {})
+      Session.new(nil, self, environments, {})
     end
 
     def session_with_variables(variables)
       Session.new(nil, self, [], variables)
     end
 
-    # ===== CONTEXTS ===================================================================================================
+    # ===== ENVIRONMENTS ===============================================================================================
 
-    def contexts_path
-      File.join(path, 'contexts')
+    def environments_path
+      File.join(path, 'environments')
     end
 
-    def context_names
-      Dir[File.join(contexts_path, "*")].find_all { |directory_path| File.directory?(directory_path) }
-                                        .map { |directory_path| File.basename(directory_path) }
+    def environment_names
+      Dir[File.join(environments_path, "*")].find_all { |directory_path| File.directory?(directory_path) }
+                                            .map { |directory_path| File.basename(directory_path) }
     end
 
-    def variant_path_for_context(context_or_variant_name)
-      context_directory, variant_name = File.split context_or_variant_name
-      if context_directory == '.'
-        context_directory = context_or_variant_name
+    def variant_path_for_environment(env_or_variant_name)
+      env_directory, variant_name = File.split env_or_variant_name
+      if env_directory == '.'
+        env_directory = env_or_variant_name
         variant_name = 'default'
       end
 
@@ -135,11 +135,11 @@ module Apothecary
             "#{variant_name}.yaml"
           end
 
-      File.join(contexts_path, context_directory, variant_filename)
+      File.join(environments_path, env_directory, variant_filename)
     end
 
-    def variables_for_context(context_or_variant_name)
-      variant_path = variant_path_for_context(context_or_variant_name)
+    def variables_for_environment(environment_or_variant_name)
+      variant_path = variant_path_for_environment(environment_or_variant_name)
       if File.exists?(variant_path)
         YAML.load(File.read(variant_path))
       else
@@ -149,15 +149,15 @@ module Apothecary
 
     # ----- WRITING ----------------------------------------------------------------------------------------------------
 
-    def write_context_yaml(context_name, context_yaml)
-      variant_path = variant_path_for_context(context_name)
+    def write_environment_yaml(environment_name, environment_yaml)
+      variant_path = variant_path_for_environment(environment_name)
 
       # ensure directory exists
-      context_dir = File.dirname variant_path
-      FileUtils.mkdir_p(context_dir)
+      env_dir = File.dirname variant_path
+      FileUtils.mkdir_p(env_dir)
 
-      File.open(variant_path, 'w') { |file| file << context_yaml }
-      context_yaml
+      File.open(variant_path, 'w') { |file| file << environment_yaml }
+      environment_yaml
     end
 
     # ===== FLOWS ======================================================================================================

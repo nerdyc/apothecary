@@ -5,10 +5,10 @@ require 'apothecary/context'
 module Apothecary
   class Session < Context
 
-    def initialize(directory_path, project, context_names, variables)
+    def initialize(directory_path, project, env_names, variables)
       parent_contexts = []
-      (context_names + project.context_names).uniq.each do |context_name|
-        parent_context = Context.new(project.variables_for_context(context_name))
+      (env_names + project.environment_names).uniq.each do |environment_name|
+        parent_context = Context.new(project.variables_for_environment(environment_name))
         parent_contexts << parent_context
       end
 
@@ -16,7 +16,7 @@ module Apothecary
 
       @directory_path = directory_path
       @project = project
-      @context_names = context_names
+      @environment_names = env_names
 
       @requests = []
     end
@@ -33,9 +33,9 @@ module Apothecary
       File.basename(directory_path)
     end
 
-    # ===== CONTEXTS ===================================================================================================
+    # ===== ENVIRONMENTS ===============================================================================================
 
-    attr_reader :context_names
+    attr_reader :environment_names
 
     # ===== PERSISTENCE ================================================================================================
 
@@ -47,7 +47,7 @@ module Apothecary
       raise "Cannot save a temporary session!" if directory_path.nil?
 
       FileUtils.mkdir_p(directory_path)
-      File.open(configuration_path, 'w') { |f| f << YAML.dump('contexts' => context_names,
+      File.open(configuration_path, 'w') { |f| f << YAML.dump('environments' => environment_names,
                                                               'variables' => variables) }
     end
 
@@ -55,15 +55,15 @@ module Apothecary
       raise "Session not found at path: #{sessions_path}" unless File.directory?(directory_path)
 
       config_path = File.join(directory_path, 'config.yaml')
-      contexts = []
+      environment_names = []
       variables = {}
       if File.exists?(config_path)
         configuration = YAML.load(File.read(config_path))
-        contexts = configuration['contexts']
+        environment_names = configuration['environments']
         variables = configuration['variables']
       end
 
-      Session.new(directory_path, project, contexts, variables)
+      Session.new(directory_path, project, environment_names, variables)
     end
 
     # ===== URI ========================================================================================================

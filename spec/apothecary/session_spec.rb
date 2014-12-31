@@ -94,7 +94,7 @@ describe 'Apothecary::Session' do
     context 'when the request exists' do
 
       before(:each) do
-        project.write_context_yaml 'api', <<-YAML
+        project.write_environment_yaml 'api', <<-YAML
           base_url: https://api.communique.dev
           message: Hello, World!
           user_agent: Apothecary
@@ -182,13 +182,13 @@ describe 'Apothecary::Session' do
   describe '#save!' do
 
     before(:each) do
-      project.write_context_yaml 'api', <<-YAML
+      project.write_environment_yaml 'api', <<-YAML
           base_url: https://api.communique.dev
           message: Hello, World!
           user_agent: Apothecary
       YAML
 
-      project.write_context_yaml 'api/staging', <<-YAML
+      project.write_environment_yaml 'api/staging', <<-YAML
           base_url: https://staging.communique.dev
           message: Hello, Test!
       YAML
@@ -198,11 +198,11 @@ describe 'Apothecary::Session' do
     end
 
     let(:session) { project.create_session('my_session',
-                                           contexts:%w[api/staging]) }
+                                           environments:%w[api/staging]) }
 
     it "writes the session data to disk" do
       expect(File.exists?(session.configuration_path)).to be_truthy
-      expect(YAML.load(File.read(session.configuration_path))).to eq('contexts' => %w[api/staging],
+      expect(YAML.load(File.read(session.configuration_path))).to eq('environments' => %w[api/staging],
                                                                      'variables' => { 'token' => 'abc123' })
     end
 
@@ -213,11 +213,11 @@ describe 'Apothecary::Session' do
   describe '#perform_flow!' do
 
     before(:each) do
-      project.write_context_yaml 'api', <<-YAML
+      project.write_environment_yaml 'api', <<-YAML
           base_url: https://api.communique.dev
       YAML
 
-      project.write_context_yaml 'profile', <<-YAML
+      project.write_environment_yaml 'profile', <<-YAML
           profile_username: amelia
           profile_first_name: Amelia
           profile_last_name: Grey
