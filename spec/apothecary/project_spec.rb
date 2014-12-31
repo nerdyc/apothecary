@@ -167,4 +167,14 @@ describe 'Apothecary::Project' do
 
   end
 
+  # ===== FLOWS ========================================================================================================
+
+  describe '#flows_path' do
+
+    it "returns the path where flows are stored" do
+      expect(project.flows_path).to eq(File.join(project.path, 'flows'))
+    end
+
+  end
+
 end

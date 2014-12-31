@@ -208,4 +208,107 @@ describe 'Apothecary::Session' do
 
   end
 
+  # ===== FLOWS ========================================================================================================
+
+  describe '#perform_flow!' do
+
+    before(:each) do
+      project.write_context_yaml 'api', <<-YAML
+          base_url: https://api.communique.dev
+      YAML
+
+      project.write_context_yaml 'profile', <<-YAML
+          profile_username: amelia
+          profile_first_name: Amelia
+          profile_last_name: Grey
+      YAML
+
+      project.write_flow_yaml 'authorization', <<-YAML
+          requests:
+            - path: /sessions
+              method: POST
+              json_body:
+                session:
+                  username: "{{profile_username}}"
+              outputs:
+                session_id: "{{session.id}}"
+
+            - path: "/sessions/{{session_id}}/verification"
+              method: POST
+              json_body:
+                verification:
+                  code: 1234
+              outputs:
+                verification_access_token: "{{verification.token}}"
+
+            - path: "/profile"
+              method: PUT
+              username: "{{profile_username}}"
+              password: "{{verification_access_token}}"
+              json_body:
+                profile:
+                  first_name: "{{profile_first_name}}"
+                  last_name: "{{profile_last_name}}"
+      YAML
+
+      stub_request(:post, "https://api.communique.dev/sessions")
+        .with(:body => {
+                  session: {
+                      username: "amelia"
+                  }
+              })
+        .to_return(
+            status: 201,
+            body: JSON.generate(session: { id: 456 }),
+            headers: {
+                'Content-Type' => 'application/json'
+            }
+        )
+
+      stub_request(:post, "https://api.communique.dev/sessions/456/verification")
+          .with(:body => {
+                    verification: {
+                        code: 1234
+                    }
+                })
+          .to_return(
+              status: 201,
+              body: JSON.generate(verification: { id: 789, token: "abcdef123456" }),
+              headers: {
+                  'Content-Type' => 'application/json'
+              }
+          )
+
+      stub_request(:put, "https://amelia:abcdef123456@api.communique.dev/profile")
+          .with(:body => {
+                    profile: {
+                        first_name: "Amelia",
+                        last_name: "Grey"
+                    }
+                })
+          .to_return(
+              status: 200,
+              body: JSON.generate(profile: { first_name: "Amelia",
+                                             last_name: "Grey" }),
+              headers: {
+                  'Content-Type' => 'application/json'
+              }
+          )
+    end
+
+    let(:session) { project.default_session }
+
+    it "executes the flow of requests" do
+      expect { session.perform_flow!('authorization') }.not_to raise_error
+
+      expect(WebMock).to have_requested(:post, 'https://api.communique.dev/sessions')
+      expect(WebMock).to have_requested(:post, 'https://api.communique.dev/sessions/456/verification')
+      expect(WebMock).to have_requested(:put, 'https://amelia:abcdef123456@api.communique.dev/profile')
+
+      expect(session.variables).to eq("session_id" => 456,
+                                      "verification_access_token" => "abcdef123456")
+    end
+
+  end
+
 end

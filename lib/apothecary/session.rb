@@ -172,5 +172,14 @@ module Apothecary
       requests.inject(0) { |total_received, response| total_received + response.content_length }
     end
 
+    # ===== FLOWS ======================================================================================================
+
+    def perform_flow!(flow_name)
+      flow_data = project.flow_named!(flow_name)
+      flow_data['requests'].each do |request_data|
+        perform_request!(request_data)
+      end
+    end
+
   end
 end

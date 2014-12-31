@@ -160,5 +160,42 @@ module Apothecary
       context_yaml
     end
 
+    # ===== FLOWS ======================================================================================================
+
+    def flows_path
+      File.join(path, 'flows')
+    end
+
+    def flow_file_path_from_name(flow_name)
+      flow_filename = flow_name
+      unless flow_filename.end_with? ".yaml"
+        flow_filename = "#{flow_filename}.yaml"
+      end
+
+      File.join(flows_path, flow_filename)
+    end
+
+    def flow_named(flow_name)
+      flow_file_path = flow_file_path_from_name(flow_name)
+      if File.exists? flow_file_path
+        YAML.load(File.read(flow_file_path))
+      end
+    end
+
+    def flow_named!(flow_name)
+      flow_named(flow_name) || raise("Unknown flow: #{flow_name}")
+    end
+
+
+    def write_flow_yaml(flow_name, flow_yaml)
+      flow_path = flow_file_path_from_name(flow_name)
+
+      FileUtils.mkdir_p(File.dirname(flow_path))
+      File.open(flow_path, 'w') { |file| file << flow_yaml }
+
+      flow_yaml
+    end
+
   end
+
 end
