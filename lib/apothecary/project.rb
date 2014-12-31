@@ -110,6 +110,11 @@ module Apothecary
       Session.new(nil, self, [], variables)
     end
 
+    def session_names
+      Dir[File.join(sessions_path, '*')].select { |session_path| File.directory?(session_path) }
+                                        .map { |session_path| File.basename(session_path) }
+    end
+
     # ===== ENVIRONMENTS ===============================================================================================
 
     def environments_path

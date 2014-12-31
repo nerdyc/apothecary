@@ -9,15 +9,13 @@ describe 'Apothecary::Project' do
     project.create_skeleton
 
     %w[.ignore_me server client api].each do |env_name|
-      env_path = File.join(project.environments_path, env_name)
-      FileUtils.mkdir_p(env_path)
+      project.write_environment_yaml env_name, <<-YAML
+        #{env_name}: "#{env_name} default"
+      YAML
 
-      # default values
-      File.open(File.join(env_path, 'default.yaml'), 'w') { |f| f << "#{env_name}: \"#{env_name} default\"" }
-
-      # alternate variant
-      File.open(File.join(env_path, 'alternate.yaml'), 'w') { |f| f << "#{env_name}: \"#{env_name} alternate\"" }
-
+      project.write_environment_yaml "#{env_name}/alternate", <<-YAML
+        #{env_name}: "#{env_name} alternate"
+      YAML
     end
     File.open(File.join(project.environments_path, 'not_a_directory'), 'w') { |f| f << "Files aren't environments" }
 
@@ -133,6 +131,19 @@ describe 'Apothecary::Project' do
 
       # default environments are still included even when not listed
       expect(session_with_environments.evaluate("api")).to eq("api default")
+    end
+
+  end
+
+  describe '#session_names' do
+
+    before(:each) do
+      project.create_session 'alpha'
+      project.create_session 'beta'
+    end
+
+    it 'returns an array of all stored sessions' do
+      expect(project.session_names).to eq(%w[alpha beta])
     end
 
   end

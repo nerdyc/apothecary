@@ -31,6 +31,18 @@ module Apothecary
       puts JSON.pretty_generate(request_data)
     end
 
+    # ===== SESSIONS ===================================================================================================
+
+    desc 'sessions', 'List sessions in the project'
+    def sessions
+      puts "# Sessions"
+      puts
+
+      project.session_names.sort.each do |session_name|
+        puts "* #{session_name}"
+      end
+    end
+
     # ===== SERVER =====================================================================================================
 
     desc 'server', 'Starts the Apothecary web-server interface'
@@ -40,16 +52,12 @@ module Apothecary
 
     # ===== PROJECT ====================================================================================================
 
-    class_option 'path', desc: 'Path to the project. Defaults to current directory.'
+    class_option 'project', desc: 'Path to the project. Defaults to current directory.'
 
     protected
 
     def project
-      if @project.nil?
-        @project = Project.new(options[:path] || Dir.pwd)
-      end
-
-      @project
+      @project ||= Project.new(options[:project] || Dir.pwd)
     end
 
   end
