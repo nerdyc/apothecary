@@ -43,7 +43,7 @@ module Apothecary
       requests_path = Pathname(self.requests_path)
       request_paths.map { |request_path|
         Pathname(request_path).relative_path_from(requests_path).to_s.sub(/\.yaml$/, '')
-      }
+      }.sort
     end
 
     def request_named(request_name)

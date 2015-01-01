@@ -68,6 +68,14 @@ module Apothecary
       @http_request_headers
     end
 
+    def http_request_content_type
+      http_request_headers['Content-Type']
+    end
+
+    def http_request_is_json?
+      self.class.content_type_is_json?(http_request_content_type)
+    end
+
     def http_request_body
       File.read(http_request_body_path) if File.exists?(http_request_body_path)
     end
@@ -102,8 +110,16 @@ module Apothecary
       http_response_headers['Content-Type']
     end
 
+    def self.content_type_is_json?(content_type)
+      return false if content_type.nil?
+      return true if content_type =~ /^application\/json(;.*)?$/
+      return true if content_type =~ /^\w+\/\w+\+json(;.*)?$/
+
+      false
+    end
+
     def http_response_is_json?
-      http_response_content_type && (http_response_content_type == 'application/json' || http_response_content_type.end_with?('+json'))
+      self.class.content_type_is_json?(http_response_content_type)
     end
 
     def http_response_status_line

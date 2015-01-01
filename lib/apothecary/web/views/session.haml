@@ -1,32 +1,39 @@
 .container
-  %h1= session.name
+  .row
+    .col-md-9
+      %table.table
+        %tbody
+          - session.request_identifiers.each do |request_identifier|
+            %tr
+              %td
+                %a{href:"/sessions/#{session.name}/requests/#{request_identifier}"}= request_identifier
 
-  %h2 Session Variables
-  %table.table.table-condensed.table-hover.table-bordered
-    %tbody
-      - session.variables.each do |variable_name, value|
-        %tr
-          %th= variable_name
-          %td= value.to_json
+      %form.form-inline{action:"/sessions/#{session.name}/requests", method:"POST"}
+        %input.form-control#requestAutoComplete{type:"text", placeholder:"Request Name", name:"request_name"}
+        %button.btn.btn-default{type:"submit"} Send
 
-  %h2 Environment Variables
-  %table.table.table-condensed.table-hover.table-bordered
-    - (session.environment_names + project.environment_names).uniq.each do |env_name|
-      %thead
-        %tr.active
-          %th{colspan:2}= env_name
-      %tbody
-        - env_variables = project.variables_for_environment(env_name)
-        - env_variables.each do |variable_name, value|
-          %tr
-            %th= variable_name
-            %td
+    .col-md-3
+      %h4 Session Variables
+      %dl
+        - session.variables.each do |variable_name, value|
+          %dt= variable_name
+          %dd
+            %code= value.to_json
+
+      %h4 Environment Variables
+      - (session.environment_names + project.environment_names).uniq.each do |env_name|
+        %h5= env_name
+        %dl
+          - env_variables = project.variables_for_environment(env_name)
+          - env_variables.each do |variable_name, value|
+            %dt= variable_name
+            %dd
               %code= value.to_json
 
-  %h2 Request History
-  %table.table
-    %tbody
-      - session.request_identifiers.each do |request_identifier|
-        %tr
-          %td
-            %a{href:"/sessions/#{session.name}/requests/#{request_identifier}"}= request_identifier
+:javascript
+  $(function() {
+      var availableTags = #{project.request_names.to_json}
+      $( "#requestAutoComplete" ).autocomplete({
+        source: availableTags
+      })
+  })
