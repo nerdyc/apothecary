@@ -69,46 +69,11 @@ module Apothecary
     # ===== URI ========================================================================================================
 
     def base_url
-      uri_from_value(resolve('base_url'))
-    end
-
-    def uri_from_hash(components)
-      scheme  = components['scheme']
-      host    = components['host']
-      port    = components['port']
-      path    = components['path']
-
-      if host.nil?
-        port = nil
-      else
-        scheme ||= 'https'
-      end
-
-      uri_class = URI::Generic
-      if scheme == 'https'
-        uri_class = URI::HTTPS
-      elsif scheme == 'http'
-        uri_class = URI::HTTP
-      end
-
-      uri_class.build(scheme: scheme,
-                      host:   host,
-                      port:   port,
-                      path:   path)
-    end
-
-    def uri_from_value(url_value)
-      if url_value.kind_of? URI
-        url_value
-      elsif url_value.kind_of? Hash
-        uri_from_hash(url_value)
-      elsif url_value.kind_of? String
-        URI(url_value)
-      end
+      Request.uri_from_value(resolve('base_url'))
     end
 
     def resolve_uri(uri)
-      uri_value = uri_from_value(uri)
+      uri_value = Request.uri_from_value(uri)
 
       base_url_value = base_url
       unless base_url_value.nil?
@@ -127,6 +92,10 @@ module Apothecary
     def request_identifiers
       Dir[File.join(requests_path, '*')].select { |request_path| File.directory?(request_path) }
                                         .map { |request_path| File.basename(request_path) }
+    end
+
+    def request_with_identifier(request_identifier)
+      Request.new(File.join(requests_path, request_identifier))
     end
 
     def request_count
@@ -155,17 +124,14 @@ module Apothecary
 
     def build_request!(request_name)
       interpolated_data = interpolate_request!(request_name)
-
-      uri = resolve_uri(interpolated_data)
+      interpolated_data['base_url'] ||= resolve('base_url')
 
       request_path =
         if request_name.kind_of? String
           File.join(requests_path, "#{next_request_number}_#{request_name.gsub(/\W/, '_')}")
         end
 
-      Request.new(request_path,
-                  uri,
-                  interpolated_data)
+      Request.new(request_path, interpolated_data)
     end
 
     def perform_request!(request_name)

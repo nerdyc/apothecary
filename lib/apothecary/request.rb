@@ -4,20 +4,35 @@ require 'json'
 module Apothecary
   class Request
 
-    UNINTERPOLATED_KEYS = %w[outputs]
-
     attr_reader :path
-    attr_reader :request_uri
     attr_reader :data
 
-    def initialize(path, request_uri, data = {})
+    def initialize(path, data = nil)
       @path = path
-      @request_uri = request_uri
       @data = data
     end
 
-    def id
-      File.basename(path).to_i
+    def identifier
+      File.basename(path)
+    end
+
+    # ===== DATA =======================================================================================================
+    # Inputs describing the request to perform
+
+    def data_path
+      File.join(path, "data.yaml") unless path.nil?
+    end
+
+    def data
+      @data ||= YAML.load_file(data_path)
+    end
+
+    def base_url
+      data['base_url']
+    end
+
+    def request_uri
+      @request_uri ||= Request.uri_from_value(data)
     end
 
     def request_method
@@ -40,36 +55,126 @@ module Apothecary
       data['password']
     end
 
-    def request_dump_path
-      File.join(path, "request.txt") unless path.nil?
+    # ===== HTTP REQUEST DATA ==========================================================================================
+    # Actual data sent over HTTP
+
+    def http_request_line
+      load_http_request! if @http_request_line.nil?
+      @http_request_line
     end
 
-    def response_dump_path
-      File.join(path, "response.txt") unless path.nil?
+    def http_request_headers
+      load_http_request! if @http_request_headers.nil?
+      @http_request_headers
     end
 
-    def data_dump_path
-      File.join(path, "data.yaml") unless path.nil?
+    def http_request_body
+      File.read(http_request_body_path) if File.exists?(http_request_body_path)
     end
+
+    def http_request_headers_string
+      File.read(http_request_headers_path) if File.exists?(http_request_headers_path)
+    end
+
+    # ----- PATHS ------------------------------------------------------------------------------------------------------
+
+    def http_request_headers_path
+      File.join(path, "request-headers.txt") unless path.nil?
+    end
+
+    def http_request_body_path
+      File.join(path, "request-body.txt") unless path.nil?
+    end
+
+    def load_http_request!
+      return unless File.exists?(http_request_headers_path)
+
+      @http_request_line, @http_request_headers = parse_headers(File.read(http_request_headers_path))
+    end
+
+    # ===== HTTP RESPONSE ==============================================================================================
+
+    def http_response_json
+      JSON.parse(http_response_body) if http_response_is_json?
+    end
+
+    def http_response_content_type
+      http_response_headers['Content-Type']
+    end
+
+    def http_response_is_json?
+      http_response_content_type && (http_response_content_type == 'application/json' || http_response_content_type.end_with?('+json'))
+    end
+
+    def http_response_status_line
+      load_http_response! if @http_response_status_line.nil?
+      @http_response_status_line
+    end
+
+    def http_response_headers
+      load_http_response! if @http_response_headers.nil?
+      @http_response_headers
+    end
+
+    def load_http_response!
+      return unless File.exists?(http_response_headers_path)
+
+      @http_response_status_line, @http_response_headers = parse_headers(File.read(http_response_headers_path))
+    end
+
+    def http_response_headers_string
+      File.read(http_response_headers_path) if File.exists?(http_response_headers_path)
+    end
+
+    def http_response_body
+      @http_response_body ||=
+          if File.exists?(http_response_body_path)
+            File.read(http_response_body_path)
+          end
+    end
+
+    def http_response_headers_path
+      File.join(path, "response-headers.txt") unless path.nil?
+    end
+
+    def http_response_body_path
+      File.join(path, "response-body.txt") unless path.nil?
+    end
+
+    # ===== HTTP HELPERS ===============================================================================================
+
+    def parse_headers(header_str)
+      http_response, *http_headers = header_str.split(/[\r\n]+/).map(&:strip)
+      [http_response, Hash[http_headers.flat_map{ |s| s.scan(/^(\S+): (.+)/) }]]
+    end
+
+    # ===== SEND =======================================================================================================
+
+    UNINTERPOLATED_KEYS = %w[outputs]
 
     def send!
       unless path.nil?
         FileUtils.mkdir_p(path)
-        File.open(data_dump_path, 'w') { |f| f << YAML.dump(data)}
+        File.open(data_path, 'w') { |f| f << YAML.dump(data)}
       end
 
       curl = Curl::Easy.new(request_uri.to_s)
       curl.headers = request_headers
       unless path.nil?
         curl.on_debug do |type, data|
-          if type == Curl::CURLINFO_HEADER_OUT || type == Curl::CURLINFO_DATA_OUT
-            File.open(request_dump_path, 'a') do |f|
-              f << data
+          output_file =
+            if type == Curl::CURLINFO_HEADER_OUT
+              http_request_headers_path
+            elsif type == Curl::CURLINFO_DATA_OUT
+              http_request_body_path
+            elsif type == Curl::CURLINFO_HEADER_IN
+              http_response_headers_path
+            elsif type == Curl::CURLINFO_DATA_IN
+              http_response_body_path
             end
-          elsif type == Curl::CURLINFO_HEADER_IN || type == Curl::CURLINFO_DATA_IN
-            File.open(response_dump_path, 'a') do |f|
-              f << data
-            end
+
+          unless output_file.nil?
+            File.open(output_file, 'a') { |f| f << data }
           end
         end
       end
@@ -99,40 +204,16 @@ module Apothecary
       end
 
       http_response, *http_headers = curl.header_str.split(/[\r\n]+/).map(&:strip)
-      @response_headers = Hash[http_headers.flat_map{ |s| s.scan(/^(\S+): (.+)/) }]
-      @response_body = curl.body_str
-    end
 
-    # ===== RESPONSE ===================================================================================================
-
-    # ----- HEADERS ----------------------------------------------------------------------------------------------------
-
-    attr_reader :response_headers
-
-    def content_length
-      (response_headers['Content-Length'] || '0').to_i
-    end
-
-    def response_content_type
-      response_headers['Content-Type']
-    end
-
-    def response_is_json?
-      response_content_type && (response_content_type == 'application/json' || response_content_type.end_with?('+json'))
-    end
-
-    # ----- BODY -------------------------------------------------------------------------------------------------------
-
-    attr_reader :response_body
-
-    def response_json
-      JSON.parse(response_body) if response_is_json?
+      @http_response_status_line = http_response
+      @http_response_headers = Hash[http_headers.flat_map{ |s| s.scan(/^(\S+): (.+)/) }]
+      @http_response_body = curl.body_str
     end
 
     # ===== OUTPUT =====================================================================================================
 
     def output(*parent_contexts)
-      request_context = Context.new(response_json,
+      request_context = Context.new(http_response_json,
                                     parent_contexts.flatten)
 
       output_definition = data['outputs']
@@ -143,6 +224,51 @@ module Apothecary
           output_values[output_name] = request_context.interpolate(definition)
         end
         output_values
+      end
+    end
+
+    # ===== URIS =======================================================================================================
+
+    def self.uri_from_hash(components)
+      scheme  = components['scheme']
+      host    = components['host']
+      port    = components['port']
+      path    = components['path']
+
+      if host.nil?
+        port = nil
+      else
+        scheme ||= 'https'
+      end
+
+      uri_class = URI::Generic
+      if scheme == 'https'
+        uri_class = URI::HTTPS
+      elsif scheme == 'http'
+        uri_class = URI::HTTP
+      end
+
+      uri = uri_class.build(scheme: scheme,
+                            host:   host,
+                            port:   port,
+                            path:   path)
+
+      # resolve against any base url
+      base_url = uri_from_value(components['base_url'])
+      if base_url != nil
+        uri = URI.join(base_url, uri)
+      end
+
+      uri
+    end
+
+    def self.uri_from_value(url_value)
+      if url_value.kind_of? URI
+        url_value
+      elsif url_value.kind_of? Hash
+        uri_from_hash(url_value)
+      elsif url_value.kind_of? String
+        URI(url_value)
       end
     end
 

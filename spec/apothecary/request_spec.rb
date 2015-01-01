@@ -7,13 +7,60 @@ describe 'Apothecary::Request' do
   let(:requests_path) { Dir.mktmpdir("apothecary_request") }
   let(:directory_path) { File.join(requests_path, "123_test_request") }
 
+  # ===== URI ==========================================================================================================
+
+  describe "::uri_from_value" do
+
+    context "when provided a string" do
+
+      it 'returns the parsed URI' do
+        uri = URI.parse("http://api.communique.dev/groups")
+        expect(Apothecary::Request.uri_from_value("http://api.communique.dev/groups")).to eq(uri)
+      end
+
+    end
+
+    context "when provided a URI" do
+
+      it 'returns the same URI' do
+        uri = URI.parse("http://api.communique.dev/groups")
+        expect(Apothecary::Request.uri_from_value(uri)).to equal(uri)
+      end
+
+    end
+
+    context "when provided a hash" do
+
+      it 'constructs a URI from a hash of values' do
+        absolute_uri = Apothecary::Request.uri_from_hash('scheme' => 'https',
+                                                         'host'   => 'some-api.communique.dev',
+                                                         'port'   => 4321,
+                                                         'path'   => '/messages')
+
+        expect(absolute_uri).to eq(URI.parse('https://some-api.communique.dev:4321/messages'))
+
+        relative_uri = Apothecary::Request.uri_from_value('path'   => '/messages')
+        expect(relative_uri).to eq(URI.parse('/messages'))
+      end
+
+      it 'defaults to https if host given, but no scheme' do
+        uri = Apothecary::Request.uri_from_value('host'   => 'some-api.communique.dev',
+                                                 'path'   => '/messages')
+
+        expect(uri).to eq(URI.parse('https://some-api.communique.dev/messages'))
+      end
+    end
+
+  end
+
   # ===== REQUEST METHODS ==============================================================================================
 
   context "when the 'method' is GET" do
 
     let(:request) { Apothecary::Request.new(directory_path,
-                                            "https://api.communique.dev/messages",
-                                            { 'method' => 'GET' }) }
+                                            'method' => 'GET',
+                                            'base_url' => 'https://api.communique.dev/',
+                                            'path' => '/messages') }
 
     before(:each) do
       stub_request(:get, "https://api.communique.dev/messages")
@@ -49,13 +96,12 @@ describe 'Apothecary::Request' do
 
       let(:request) {
         Apothecary::Request.new(directory_path,
-                                "https://api.communique.dev/messages",
-                                {
-                                    'method' => 'POST',
-                                    'json_body' => {
-                                      'type' => 'text',
-                                      'text' => 'Hello, World!'
-                                    }
+                                'base_url' => 'https://api.communique.dev/',
+                                'path' => '/messages',
+                                'method' => 'POST',
+                                'json_body' => {
+                                  'type' => 'text',
+                                  'text' => 'Hello, World!'
                                 })
       }
 
@@ -85,13 +131,12 @@ describe 'Apothecary::Request' do
 
       let(:request) {
         Apothecary::Request.new(directory_path,
-                                "https://api.communique.dev/messages",
-                                {
-                                    'method' => 'PUT',
-                                    'json_body' => {
-                                        'type' => 'text',
-                                        'text' => 'Hello, World!'
-                                    }
+                                'base_url' => 'https://api.communique.dev/',
+                                'path' => '/messages',
+                                'method' => 'PUT',
+                                'json_body' => {
+                                    'type' => 'text',
+                                    'text' => 'Hello, World!'
                                 })
       }
 
@@ -120,13 +165,13 @@ describe 'Apothecary::Request' do
   context 'when headers are present' do
 
     let(:request) { Apothecary::Request.new(directory_path,
-                                            "https://api.communique.dev/messages",
-                                            {
-                                                'headers' => {
-                                                    'User-Agent' => 'Apothecary',
-                                                    'X-Greek' => %w[Alpha Beta]
-                                                }
-                                            }) }
+                                            'base_url' => 'https://api.communique.dev/',
+                                            'path' => '/messages',
+                                            'headers' => {
+                                                'User-Agent' => 'Apothecary',
+                                                'X-Greek' => %w[Alpha Beta]
+                                            })
+    }
 
     before(:each) do
       stub_request(:get,
@@ -147,11 +192,10 @@ describe 'Apothecary::Request' do
   context 'when authorization data is present' do
 
     let(:request) { Apothecary::Request.new(directory_path,
-                                            "https://api.communique.dev/messages/secret",
-                                            {
-                                                'username' => 'edith@communique.dev',
-                                                'password' => 'abcdef123456'
-                                            }) }
+                                            'base_url' => 'https://api.communique.dev/',
+                                            'path' => '/messages/secret',
+                                            'username' => 'edith@communique.dev',
+                                            'password' => 'abcdef123456') }
 
     it 'has a username and password' do
       expect(request.username).to eq('edith@communique.dev')
@@ -176,12 +220,11 @@ describe 'Apothecary::Request' do
   context 'when a request has outputs' do
 
     let(:request) { Apothecary::Request.new(directory_path,
-                                            "https://api.communique.dev/messages",
-                                            {
-                                                'method' => 'POST',
-                                                'outputs' => {
-                                                    'latest_message_timestamp' => '{{message.timestamp_in_ms}}',
-                                                }
+                                            'base_url' => 'https://api.communique.dev/',
+                                            'path' => '/messages',
+                                            'method' => 'POST',
+                                            'outputs' => {
+                                                'latest_message_timestamp' => '{{message.timestamp_in_ms}}',
                                             }) }
 
     it "collects the output from the response" do

@@ -1,0 +1,21 @@
+.container
+  %h1= @session_request.identifier
+
+  %h2 Data
+  %pre= JSON.pretty_generate(@session_request.data)
+
+  %h2 Request
+  %h3 Headers
+  %pre= @session_request.http_request_headers_string
+  - request_body = @session_request.http_request_body
+  - unless request_body.nil?
+    %h3 Body
+    %pre= @session_request.http_request_body
+
+  %h2 Response
+  %h3 Headers
+  %pre= @session_request.http_response_headers_string
+  - response_body = @session_request.http_response_body
+  - unless response_body.nil?
+    %h3 Body
+    %pre= @session_request.http_response_body

@@ -22,3 +22,11 @@
             %th= variable_name
             %td
               %code= value.to_json
+
+  %h2 Request History
+  %table.table
+    %tbody
+      - session.request_identifiers.each do |request_identifier|
+        %tr
+          %td
+            %a{href:"/sessions/#{session.name}/requests/#{request_identifier}"}= request_identifier

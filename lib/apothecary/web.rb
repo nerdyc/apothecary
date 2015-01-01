@@ -53,5 +53,12 @@ module Apothecary
       haml :session
     end
 
+    get '/sessions/:session_name/requests/:request_identifier' do |session_name, request_identifier|
+      @session = @project.open_session(session_name)
+      @session_request = @session.request_with_identifier(request_identifier)
+
+      haml :session_request
+    end
+
   end
 end
