@@ -6,8 +6,6 @@ describe 'Apothecary::Project' do
   let(:project) { Apothecary::Project.new(root) }
 
   before(:each) do
-    project.create_skeleton
-
     %w[.ignore_me server client api].each do |env_name|
       project.write_environment_yaml env_name, <<-YAML
         #{env_name}: "#{env_name} default"
@@ -19,39 +17,39 @@ describe 'Apothecary::Project' do
     end
     File.open(File.join(project.environments_path, 'not_a_directory'), 'w') { |f| f << "Files aren't environments" }
 
-    project.write_request_yaml 'messages', <<-YAML
+    project.write_action_yaml 'messages', <<-YAML
         path: /messages
         method: GET
       YAML
   end
 
-  # ===== REQUESTS =====================================================================================================
+  # ===== ACTIONS ======================================================================================================
 
-  describe '#requests_path' do
+  describe '#actions_path' do
 
-    it 'returns the path to the requests directory' do
-      expect(project.requests_path).to eq(File.join(root, 'requests'))
+    it 'returns the path to the actions directory' do
+      expect(project.actions_path).to eq(File.join(root, 'actions'))
     end
 
   end
 
-  describe '#request_paths' do
-    it 'returns the paths of all request files in the project' do
-      expect(project.request_paths).to eq([ File.join(project.requests_path, 'messages.yaml') ])
+  describe '#action_paths' do
+    it 'returns the paths of all action files in the project' do
+      expect(project.action_paths).to eq([ File.join(project.actions_path, 'messages.yaml') ])
     end
   end
 
-  describe '#request_named' do
+  describe '#action_data_named' do
 
-    it 'returns the request data matching the name when it exists' do
-      request = project.request_named('messages')
-      expect(request).to eq({ 'path' => '/messages',
-                              'method' => 'GET',
-                              'action_name' => 'messages'})
+    it 'returns the action data matching the name when it exists' do
+      action_data = project.action_data_named('messages')
+      expect(action_data).to eq('path' => '/messages',
+                                'method' => 'GET',
+                                'action_name' => 'messages')
     end
 
-    it 'returns nil when no request exists' do
-      expect(project.request_named('messages/delete')).to be_nil
+    it 'returns nil when no action exists' do
+      expect(project.action_data_named('messages/delete')).to be_nil
     end
 
   end

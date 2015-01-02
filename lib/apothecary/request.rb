@@ -204,8 +204,6 @@ module Apothecary
 
     # ===== SEND =======================================================================================================
 
-    UNINTERPOLATED_KEYS = %w[outputs]
-
     def send!
       unless path.nil?
         FileUtils.mkdir_p(path)

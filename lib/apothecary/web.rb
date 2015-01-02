@@ -53,7 +53,7 @@ module Apothecary
     end
 
     post '/sessions/:session_name/requests' do
-      request = session.perform_request!(params[:request_name])
+      request = session.perform_request!(params[:action_name])
       redirect to("/sessions/#{session.name}")
     end
 

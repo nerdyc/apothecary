@@ -7,28 +7,28 @@ require 'apothecary/web'
 module Apothecary
   class CLI < Thor
 
-    # ===== REQUESTS ===================================================================================================
+    # ===== ACTIONS ====================================================================================================
 
-    desc 'requests', 'List all requests defined in the project.'
-    def requests
-      puts "# Requests"
+    desc 'actions', 'List all actions defined in the project.'
+    def actions
+      puts "# Actions"
       puts
 
-      project.request_names.sort.each do |request_name|
-        puts "* #{request_name}"
+      project.action_names.sort.each do |action_name|
+        puts "* #{action_name}"
       end
     end
 
-    desc 'request ENDPOINT_NAME', 'Make a request to an endpoint'
+    desc 'request ACTION_NAME', 'Makes a request'
     option :session, :default => "default"
-    def request(request_name)
-      session.perform_request!(request_name)
+    def request(action_name)
+      session.perform_request!(action_name)
     end
 
-    desc 'interpolate_request ENDPOINT_NAME', 'Prints request meta-data used to make a request'
+    desc 'build-request ACTION_NAME', "Prints meta-data used to make a request, but doesn't make the request"
     option :session, :default => "default"
-    def interpolate_request(request_name)
-      request_data = session.interpolate_request!(request_name)
+    def build_request(action_name)
+      request_data = session.build_request_data!(action_name)
       puts JSON.pretty_generate(request_data)
     end
 

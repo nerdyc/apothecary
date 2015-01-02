@@ -1,6 +1,7 @@
 require 'fileutils'
 require 'apothecary/request'
 require 'apothecary/context'
+require 'apothecary/action'
 
 module Apothecary
   class Session < Context
@@ -35,7 +36,7 @@ module Apothecary
     end
 
     def title
-      @title
+      @title || name
     end
 
     # ===== ENVIRONMENTS ===============================================================================================
@@ -58,7 +59,7 @@ module Apothecary
     end
 
     def self.load!(directory_path, project)
-      raise "Session not found at path: #{sessions_path}" unless File.directory?(directory_path)
+      raise "Session not found at path: #{directory_path}" unless File.directory?(directory_path)
 
       config_path = File.join(directory_path, 'config.yaml')
       environment_names = []
@@ -118,32 +119,31 @@ module Apothecary
       (last_request_identifier || '0').to_i + 1
     end
 
-    def interpolate_request!(request_name)
-      request_data =
-          if request_name.kind_of? Hash
-            request_name
+    def build_request_data!(action_name_or_data)
+      action =
+          if action_name_or_data.kind_of? Hash
+            Action.new(action_name_or_data)
           else
-            project.request_named!(request_name)
+            project.action_named!(action_name_or_data)
           end
 
-      interpolated_data = interpolate(request_data.reject { |key| Request::UNINTERPOLATED_KEYS.include?(key.to_s) })
-      request_data.merge(interpolated_data)
+      action.build_request_data!(self)
     end
 
-    def build_request!(request_name)
-      interpolated_data = interpolate_request!(request_name)
-      interpolated_data['base_url'] ||= resolve('base_url')
+    def build_request!(action_name_or_data)
+      request_data = build_request_data!(action_name_or_data)
+      request_data['base_url'] ||= resolve('base_url')
 
       request_path =
-        if request_name.kind_of? String
-          File.join(requests_path, "#{next_request_number}_#{request_name.gsub(/\W/, '_')}")
+        if action_name_or_data.kind_of? String
+          File.join(requests_path, "#{next_request_number}_#{action_name_or_data.gsub(/\W/, '_')}")
         end
 
-      Request.new(request_path, interpolated_data)
+      Request.new(request_path, request_data)
     end
 
-    def perform_request!(request_name)
-      request = build_request!(request_name)
+    def perform_request!(action_name_or_data)
+      request = build_request!(action_name_or_data)
       request.send!
 
       output = request.output(self)
@@ -159,8 +159,8 @@ module Apothecary
 
     def perform_flow!(flow_name)
       flow_data = project.flow_named!(flow_name)
-      flow_data['requests'].each do |request_data|
-        perform_request!(request_data)
+      flow_data['actions'].each do |action_name_or_data|
+        perform_request!(action_name_or_data)
       end
     end
 

@@ -1,6 +1,11 @@
 .container
   .row
+    .col-md-12
+      .page-header
+        %h3= session.title
+  .row
     .col-md-8
+      %h4 Request History
       %table.table
         %tbody
           - session.request_identifiers.each do |request_identifier|
@@ -27,17 +32,18 @@
                 .input-group-btn
                   %button.btn.btn-default.dropdown-toggle{type:"button", 'data-toggle' => "dropdown", 'aria-expanded'=>"false"}
                     %span.caret
-                    %span.sr-only Toggle Request List
+                    %span.sr-only Toggle Action List
                   %ul.dropdown-menu{role:"menu"}
-                    - project.request_names.each do |request_name|
+                    - project.action_names.each do |request_name|
                       %li
-                        %a.request-list-item= request_name
-                %input.form-control#requestAutoComplete{type:"text", placeholder:"Send a request", name:"request_name"}
+                        %a.action-list-item= request_name
+                %input.form-control#requestAutoComplete{type:"text", placeholder:"Send a request", name:"action_name"}
                 .input-group-btn
                   %button.btn.btn-primary{type:"submit"}
                     Send
 
     .col-md-4
+      %h4 Variables
       %dl
         - session.variables.each do |variable_name, value|
           %dt= variable_name
@@ -54,12 +60,12 @@
 
 :javascript
   $(function() {
-      var availableTags = #{project.request_names.to_json}
+      var availableTags = #{project.action_names.to_json}
       $( "#requestAutoComplete" ).autocomplete({
         source: availableTags
       })
 
-      $("a.request-list-item").click(function(event) {
+      $("a.action-list-item").click(function(event) {
         $("#requestAutoComplete").val(event.target.text)
       })
   })

@@ -23,65 +23,56 @@ module Apothecary
       File.basename(path)
     end
 
-    def create_skeleton
-      FileUtils.mkdir_p path
-      FileUtils.mkdir_p requests_path
-      FileUtils.mkdir_p environments_path
-      FileUtils.mkdir_p sessions_path
-    end
-
     # ===== ACTIONS ====================================================================================================
 
-    def action_named!(action_name)
-      Action.new(request_named!(action_name).merge('action_name' => action_name))
+    def actions_path
+      @actions_path ||= File.join(path, "actions")
     end
 
-    # ===== REQUESTS ===================================================================================================
-
-    def requests_path
-      @requests_path ||= File.join(path, "requests")
+    def action_paths
+      Dir[File.join(actions_path, "**/*.yaml")]
     end
 
-    def request_paths
-      Dir[File.join(requests_path, "**/*.yaml")]
-    end
-
-    def request_names
-      requests_path = Pathname(self.requests_path)
-      request_paths.map { |request_path|
-        Pathname(request_path).relative_path_from(requests_path).to_s.sub(/\.yaml$/, '')
+    def action_names
+      actions_path = Pathname(self.actions_path)
+      action_paths.map { |action_path|
+        Pathname(action_path).relative_path_from(actions_path).to_s.sub(/\.yaml$/, '')
       }.sort
     end
 
-    def request_named(request_name)
-      request_file_path = request_file_path_from_name(request_name)
-      if File.exists? request_file_path
-        YAML.load_file(request_file_path).merge('action_name' => request_name)
+    def action_data_named(action_name)
+      action_file_path = action_file_path_from_name(action_name)
+      if File.exists? action_file_path
+        YAML.load_file(action_file_path).merge('action_name' => action_name)
       end
     end
 
-    def request_named!(request_name)
-      request_named(request_name) || raise("Unknown request: #{request_name}")
+    def action_data_named!(action_name)
+      action_data_named(action_name) || raise("Unknown action: #{action_name}")
+    end
+
+    def action_named!(action_name)
+      Action.new(action_data_named!(action_name).merge('action_name' => action_name))
     end
 
     # ----- WRITING ----------------------------------------------------------------------------------------------------
 
-    def request_file_path_from_name(request_name)
-      request_filename = request_name
-      unless request_filename.end_with? ".yaml"
-        request_filename = "#{request_filename}.yaml"
+    def action_file_path_from_name(action_name)
+      action_filename = action_name
+      unless action_filename.end_with? ".yaml"
+        action_filename = "#{action_filename}.yaml"
       end
 
-      File.join(requests_path, request_filename)
+      File.join(actions_path, action_filename)
     end
 
-    def write_request_yaml(request_name, request_yaml)
-      request_path = request_file_path_from_name(request_name)
+    def write_action_yaml(action_name, action_yaml)
+      action_path = action_file_path_from_name(action_name)
 
-      FileUtils.mkdir_p(File.dirname(request_path))
-      File.open(request_path, 'w') { |file| file << request_yaml }
+      FileUtils.mkdir_p(File.dirname(action_path))
+      File.open(action_path, 'w') { |file| file << action_yaml }
 
-      request_yaml
+      action_yaml
     end
 
     # ===== SESSIONS ===================================================================================================

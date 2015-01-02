@@ -4,8 +4,8 @@ describe 'Apothecary::Request' do
 
   let(:request_identifier) { "abc123" }
   let(:request_name) { "test/request" }
-  let(:requests_path) { Dir.mktmpdir("apothecary_request") }
-  let(:directory_path) { File.join(requests_path, "123_test_request") }
+  let(:actions_path) { Dir.mktmpdir("apothecary_request") }
+  let(:directory_path) { File.join(actions_path, "123_test_request") }
 
   # ===== URI ==========================================================================================================
 

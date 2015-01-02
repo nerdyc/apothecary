@@ -44,7 +44,7 @@ describe 'Apothecary::Session' do
           user_agent: Apothecary
         YAML
 
-        project.write_request_yaml 'messages/post', <<-YAML
+        project.write_action_yaml 'messages/post', <<-YAML
             path:   /messages
             method: POST
             headers:
@@ -164,7 +164,7 @@ describe 'Apothecary::Session' do
       YAML
 
       project.write_flow_yaml 'authorization', <<-YAML
-          requests:
+          actions:
             - path: /sessions
               method: POST
               json_body:
