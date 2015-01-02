@@ -141,7 +141,8 @@ describe 'Apothecary::Session' do
 
     it "writes the session data to disk" do
       expect(File.exists?(session.configuration_path)).to be_truthy
-      expect(YAML.load(File.read(session.configuration_path))).to eq('environments' => %w[api/staging],
+      expect(YAML.load(File.read(session.configuration_path))).to eq('title' => nil,
+                                                                     'environments' => %w[api/staging],
                                                                      'variables' => { 'token' => 'abc123' })
     end
 

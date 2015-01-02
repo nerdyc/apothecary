@@ -46,7 +46,8 @@ describe 'Apothecary::Project' do
     it 'returns the request data matching the name when it exists' do
       request = project.request_named('messages')
       expect(request).to eq({ 'path' => '/messages',
-                              'method' => 'GET' })
+                              'method' => 'GET',
+                              'action_name' => 'messages'})
     end
 
     it 'returns nil when no request exists' do
@@ -60,6 +61,7 @@ describe 'Apothecary::Project' do
   describe '#create_session' do
 
     let(:session) { project.create_session('jam_session',
+                                           title: 'Jam Session',
                                            environments: %w[api/alternate],
                                            variables: {
                                                'a' => 1,
@@ -70,7 +72,8 @@ describe 'Apothecary::Project' do
       expect(session.configuration_path).to_not be_nil
       expect(File.exists?(session.configuration_path)).to be_truthy
 
-      expect(YAML.load(File.read(session.configuration_path))).to eq({'environments' => %w[api/alternate],
+      expect(YAML.load(File.read(session.configuration_path))).to eq({'title' => 'Jam Session',
+                                                                      'environments' => %w[api/alternate],
                                                                       'variables' => {
                                                                           'a' => 1,
                                                                           'b' => 2

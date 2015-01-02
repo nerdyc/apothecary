@@ -1,28 +1,50 @@
 .container
   .row
-    .col-md-9
+    .col-md-8
       %table.table
         %tbody
           - session.request_identifiers.each do |request_identifier|
+            - request = session.request_with_identifier(request_identifier)
+            - action = project.action_named!(request.action_name)
+            - request_class = 'info'
+            - request_class = 'success' if request.http_response_success?
+            - request_class = 'danger' if request.http_response_error?
             %tr
               %td
-                %a{href:"/sessions/#{session.name}/requests/#{request_identifier}"}= request_identifier
+                %span.label.pull-right{class:"label-#{request_class}"}
+                  = request.http_response_status_code
+                  = request.http_response_status_message
+                %a{href:"/sessions/#{session.name}/requests/#{request_identifier}"}
+                  %strong= action.title
+                .request-uri.text-muted{style:"font-family:Menlo, Monaco, Consolas, \"Courier New\", monospace;"}
+                  = request.request_method
+                  = request.request_uri.path.to_s
+        %tfoot
+          %td
+            %form.form{action:"/sessions/#{session.name}/requests", method:"POST"}
+              %label.sr-only{for:"requestAutoComplete"} Request Name
+              .input-group
+                .input-group-btn
+                  %button.btn.btn-default.dropdown-toggle{type:"button", 'data-toggle' => "dropdown", 'aria-expanded'=>"false"}
+                    %span.caret
+                    %span.sr-only Toggle Request List
+                  %ul.dropdown-menu{role:"menu"}
+                    - project.request_names.each do |request_name|
+                      %li
+                        %a.request-list-item= request_name
+                %input.form-control#requestAutoComplete{type:"text", placeholder:"Send a request", name:"request_name"}
+                .input-group-btn
+                  %button.btn.btn-primary{type:"submit"}
+                    Send
 
-      %form.form-inline{action:"/sessions/#{session.name}/requests", method:"POST"}
-        %input.form-control#requestAutoComplete{type:"text", placeholder:"Request Name", name:"request_name"}
-        %button.btn.btn-default{type:"submit"} Send
-
-    .col-md-3
-      %h4 Session Variables
+    .col-md-4
       %dl
         - session.variables.each do |variable_name, value|
           %dt= variable_name
           %dd
             %code= value.to_json
 
-      %h4 Environment Variables
       - (session.environment_names + project.environment_names).uniq.each do |env_name|
-        %h5= env_name
         %dl
           - env_variables = project.variables_for_environment(env_name)
           - env_variables.each do |variable_name, value|
@@ -35,5 +57,9 @@
       var availableTags = #{project.request_names.to_json}
       $( "#requestAutoComplete" ).autocomplete({
         source: availableTags
+      })
+
+      $("a.request-list-item").click(function(event) {
+        $("#requestAutoComplete").val(event.target.text)
       })
   })

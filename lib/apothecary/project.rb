@@ -1,5 +1,6 @@
 require 'fileutils'
 require 'apothecary/session'
+require 'apothecary/action'
 require 'yaml'
 require 'pathname'
 
@@ -29,6 +30,12 @@ module Apothecary
       FileUtils.mkdir_p sessions_path
     end
 
+    # ===== ACTIONS ====================================================================================================
+
+    def action_named!(action_name)
+      Action.new(request_named!(action_name).merge('action_name' => action_name))
+    end
+
     # ===== REQUESTS ===================================================================================================
 
     def requests_path
@@ -49,7 +56,7 @@ module Apothecary
     def request_named(request_name)
       request_file_path = request_file_path_from_name(request_name)
       if File.exists? request_file_path
-        YAML.load_file request_file_path
+        YAML.load_file(request_file_path).merge('action_name' => request_name)
       end
     end
 
@@ -85,6 +92,7 @@ module Apothecary
 
       session = Session.new(File.join(sessions_path, name),
                             self,
+                            options['title'] || options[:title],
                             environment_names,
                             variables)
       session.save!
@@ -97,7 +105,7 @@ module Apothecary
     end
 
     def default_session
-      @default_session ||= Session.new(File.join(sessions_path, 'default'), self, [], {})
+      @default_session ||= Session.new(File.join(sessions_path, 'default'), self, "Default Session", [], {})
     end
 
     def sessions_path
@@ -107,11 +115,11 @@ module Apothecary
     def session_with_environments(*environments)
       environments.flatten!
 
-      Session.new(nil, self, environments, {})
+      Session.new(nil, self, nil, environments, {})
     end
 
     def session_with_variables(variables)
-      Session.new(nil, self, [], variables)
+      Session.new(nil, self, nil, [], variables)
     end
 
     def session_names

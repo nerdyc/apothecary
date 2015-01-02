@@ -3,4 +3,4 @@
   %ul.list-group
     - project.session_names.each do |session_name|
       %li.list-group-item
-        %a{href:"/sessions/#{session_name}"}= session_name
+        %a{href:"/sessions/#{session_name}"}= project.open_session(session_name).title

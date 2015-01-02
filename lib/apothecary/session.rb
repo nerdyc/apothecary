@@ -5,7 +5,7 @@ require 'apothecary/context'
 module Apothecary
   class Session < Context
 
-    def initialize(directory_path, project, env_names, variables)
+    def initialize(directory_path, project, title, env_names, variables)
       parent_contexts = []
       (env_names + project.environment_names).uniq.each do |environment_name|
         parent_context = Context.new(project.variables_for_environment(environment_name))
@@ -16,6 +16,7 @@ module Apothecary
 
       @directory_path = directory_path
       @project = project
+      @title = title
       @environment_names = env_names
 
       @requests = []
@@ -33,6 +34,10 @@ module Apothecary
       File.basename(directory_path)
     end
 
+    def title
+      @title
+    end
+
     # ===== ENVIRONMENTS ===============================================================================================
 
     attr_reader :environment_names
@@ -47,7 +52,8 @@ module Apothecary
       raise "Cannot save a temporary session!" if directory_path.nil?
 
       FileUtils.mkdir_p(directory_path)
-      File.open(configuration_path, 'w') { |f| f << YAML.dump('environments' => environment_names,
+      File.open(configuration_path, 'w') { |f| f << YAML.dump('title' => title,
+                                                              'environments' => environment_names,
                                                               'variables' => variables) }
     end
 
@@ -57,13 +63,15 @@ module Apothecary
       config_path = File.join(directory_path, 'config.yaml')
       environment_names = []
       variables = {}
+      title = nil
       if File.exists?(config_path)
         configuration = YAML.load_file config_path
+        title = configuration['title']
         environment_names = configuration['environments']
         variables = configuration['variables']
       end
 
-      Session.new(directory_path, project, environment_names, variables)
+      Session.new(directory_path, project, title, environment_names, variables)
     end
 
     # ===== URI ========================================================================================================
@@ -142,6 +150,7 @@ module Apothecary
       if output
         variables.merge!(output)
       end
+      save!
 
       request
     end

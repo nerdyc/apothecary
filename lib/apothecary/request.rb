@@ -16,6 +16,18 @@ module Apothecary
       File.basename(path)
     end
 
+    # ===== TITLE ======================================================================================================
+
+    def title
+      data['title'] || action_name || identifier
+    end
+
+    # ===== ACTION =====================================================================================================
+
+    def action_name
+      data['action_name']
+    end
+
     # ===== DATA =======================================================================================================
     # Inputs describing the request to perform
 
@@ -127,6 +139,32 @@ module Apothecary
       @http_response_status_line
     end
 
+    HTTP_STATUS_LINE_PATTERN = /^\s*HTTP\/(\d\.\d)\s+(\d+)\s+(.*)$/
+
+    def http_response_version
+      @http_response_version ||= ($1 if http_response_status_line =~ HTTP_STATUS_LINE_PATTERN)
+    end
+
+    def http_response_status_code
+      @http_response_status_code ||= ($2.to_i if http_response_status_line =~ HTTP_STATUS_LINE_PATTERN)
+    end
+
+    def http_response_success?
+      http_response_status_code >= 200 && http_response_status_code < 300
+    end
+
+    def http_response_redirect?
+      http_response_status_code >= 300 && http_response_status_code < 400
+    end
+
+    def http_response_error?
+      http_response_status_code >= 400
+    end
+
+    def http_response_status_message
+      $3 if http_response_status_line =~ HTTP_STATUS_LINE_PATTERN
+    end
+
     def http_response_headers
       load_http_response! if @http_response_headers.nil?
       @http_response_headers
@@ -196,6 +234,7 @@ module Apothecary
       end
 
       if username != nil
+        curl.http_auth_types = :basic
         curl.username = username
         curl.password = password
       end
