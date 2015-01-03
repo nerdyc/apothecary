@@ -129,6 +129,10 @@ module Apothecary
                                             .map { |directory_path| File.basename(directory_path) }
     end
 
+    def variants_of_environment(environment_name)
+      Dir[File.join(environments_path, environment_name, "*.yaml")].map { |directory_path| File.basename(directory_path, ".yaml") }
+    end
+
     def variant_path_for_environment(env_or_variant_name)
       env_directory, variant_name = File.split env_or_variant_name
       if env_directory == '.'

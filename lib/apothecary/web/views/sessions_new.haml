@@ -1,0 +1,28 @@
+.container
+  .page-header
+    %h1 New Session
+  .row
+    %form.form-horizontal{action:"/sessions", method:"POST"}
+      .form-group
+        %label.col-sm-2.control-label{for:"session_title"} Title
+        .col-sm-10
+          %input{type:"text", name:"session_title", placeholder:"Session Title"}
+
+      .form-group
+        %label.col-sm-2.control-label Environments
+        .col-sm-10
+          - project.environment_names.each do |environment_name|
+            - project.variants_of_environment(environment_name).each do |variant_name|
+              - env_variant = "#{environment_name}/#{variant_name}"
+              .checkbox
+                %label
+                  %input{type:"checkbox",
+                         name:"environment_names",
+                         value:"#{env_variant}",
+                         checked:('checked' if variant_name=='default'),
+                         disabled:('disabled' if variant_name=='default')}= env_variant
+
+      .form-group
+        .col-sm-offset-2.col-sm-10
+          %button.btn.btn-primary{type:"submit"} Create Session
+

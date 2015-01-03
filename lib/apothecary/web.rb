@@ -31,7 +31,7 @@ module Apothecary
       end
 
       def session
-        @session ||= project.open_session(params[:session_name])
+        @session ||= (project.open_session(params[:session_name]) unless params[:session_name].nil?)
       end
 
     end
@@ -39,13 +39,32 @@ module Apothecary
     # ===== ROOT =======================================================================================================
 
     get '/' do
-      erb :index
+      if project.session_names.include?('default')
+        redirect to("/sessions/default")
+      elsif project.session_names.first
+        redirect to("/sessions/#{project.session_names.first}")
+      else
+        haml :index
+      end
     end
 
     # ===== SESSIONS ===================================================================================================
 
     get '/sessions' do
-      haml :sessions, :layout => true
+      haml :sessions
+    end
+
+    get '/sessions/new' do
+      haml :sessions_new
+    end
+
+    post '/sessions' do
+      title = (params[:session_title] || params[:session_name]).strip.gsub(/\s+/, ' ')
+      name = title.downcase.gsub(/\W+/, '_')
+
+      environment_names = [ params[:environment_names] ].flatten
+      session = project.create_session(name, 'title' => title, 'environments' => environment_names)
+      redirect to("/sessions/#{session.name}")
     end
 
     get '/sessions/:session_name' do

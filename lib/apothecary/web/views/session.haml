@@ -1,8 +1,8 @@
 .container
   .row
     .col-md-12
-      .page-header
-        %h3= session.title
+      %h3= session.title
+      %hr/
   .row
     .col-md-8
       %h4 Request History
@@ -44,8 +44,10 @@
 
     .col-md-4
       %h4 Variables
+      - printed_variables = []
       %dl
         - session.variables.each do |variable_name, value|
+          - printed_variables << variable_name
           %dt= variable_name
           %dd
             %code= value.to_json
@@ -54,6 +56,9 @@
         %dl
           - env_variables = project.variables_for_environment(env_name)
           - env_variables.each do |variable_name, value|
+            - next if printed_variables.include?(variable_name)
+            - printed_variables << variable_name
+
             %dt= variable_name
             %dd
               %code= value.to_json
