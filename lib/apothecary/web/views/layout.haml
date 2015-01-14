@@ -37,13 +37,10 @@
           %a.navbar-brand{href:("/sessions/#{session.name}" unless session.nil?) || "/"} Apothecary
 
         .collapse.navbar-collapse#apothecary-navbar-collapse-1
-          %ul.nav.navbar-nav.navbar-right
+          %ul.nav.navbar-nav
             %li.dropdown
               %a.dropdown-toggle#session_menu{role:"button", "data-toggle"=>"dropdown","aria-expanded" => "true"}
-                - if session.nil?
-                  Sessions
-                - else
-                  = session.title
+                Sessions
                 %span.caret
               %ul.dropdown-menu{role:"menu", "aria-labelledby"=>"dropdownMenu1"}
                 - project.session_names.each do |session_name|
@@ -54,7 +51,6 @@
                   %li.divider
                 %li{role:"presentation", class:"#{'active' if request.path_info == '/sessions/new'}"}
                   %a{role:"menuitem", tabindex:"-1", href:"/sessions/new"} New Session
-
 
     != yield
 
