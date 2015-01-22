@@ -159,6 +159,12 @@ module Apothecary
       end
     end
 
+    def create_environment(name, variables = {})
+      write_environment_yaml(name, YAML.dump(variables))
+
+      variables
+    end
+
     # ----- WRITING ----------------------------------------------------------------------------------------------------
 
     def write_environment_yaml(environment_name, environment_yaml)

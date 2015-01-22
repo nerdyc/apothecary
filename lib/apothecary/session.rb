@@ -119,7 +119,7 @@ module Apothecary
       (last_request_identifier || '0').to_i + 1
     end
 
-    def build_request_data!(action_name_or_data)
+    def build_request_data!(action_name_or_data, options = {})
       action =
           if action_name_or_data.kind_of? Hash
             Action.new(action_name_or_data)
@@ -127,11 +127,19 @@ module Apothecary
             project.action_named!(action_name_or_data)
           end
 
-      action.build_request_data!(self)
+      parent_contexts = (options[:environments] || []).collect { |env_name|
+        Context.new(project.variables_for_environment(env_name))
+      }
+      parent_contexts << self
+
+      context = Context.new(options[:variables] || {},
+                            parent_contexts)
+
+      action.build_request_data!(context)
     end
 
-    def build_request!(action_name_or_data)
-      request_data = build_request_data!(action_name_or_data)
+    def build_request!(action_name_or_data, options = {})
+      request_data = build_request_data!(action_name_or_data, options)
       request_data['base_url'] ||= resolve('base_url')
 
       request_path =
@@ -142,8 +150,8 @@ module Apothecary
       Request.new(request_path, request_data)
     end
 
-    def perform_request!(action_name_or_data)
-      request = build_request!(action_name_or_data)
+    def perform_request!(action_name_or_data, options = {})
+      request = build_request!(action_name_or_data, options)
       request.send!
 
       output = request.output(self)

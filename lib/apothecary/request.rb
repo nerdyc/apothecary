@@ -173,7 +173,7 @@ module Apothecary
     def load_http_response!
       return unless File.exists?(http_response_headers_path)
 
-      @http_response_status_line, @http_response_headers = parse_headers(File.read(http_response_headers_path))
+      @http_response_status_line, @http_response_headers = parse_headers(http_response_headers_string)
     end
 
     def http_response_headers_string

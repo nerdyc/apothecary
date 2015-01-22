@@ -20,15 +20,30 @@ module Apothecary
     end
 
     desc 'request ACTION_NAME', 'Makes a request'
-    option :session, :default => "default"
+    option :session, :default => "default", :aliases => %w[-s]
+    option :environments, :type => :array, :aliases => %w[-e]
+    option :variables, :type => :hash, :aliases => %w[-D]
     def request(action_name)
-      session.perform_request!(action_name)
+      request = session.perform_request!(action_name,
+                                         :environments => options[:environments],
+                                         :variables => options[:variables])
+
+      puts request.http_response_headers_string
+      if request.http_response_is_json?
+        puts JSON.pretty_generate(request.http_response_json)
+      else
+        puts request.http_response_body
+      end
     end
 
     desc 'build-request ACTION_NAME', "Prints meta-data used to make a request, but doesn't make the request"
-    option :session, :default => "default"
+    option :session, :default => "default", :aliases => %w[-s]
+    option :environments, :type => :array, :aliases => %w[-e]
+    option :variables, :type => :hash, :aliases => %w[-D]
     def build_request(action_name)
-      request_data = session.build_request_data!(action_name)
+      request_data = session.build_request_data!(action_name,
+                                                 :environments => options[:environments],
+                                                 :variables => options[:variables])
       puts JSON.pretty_generate(request_data)
     end
 
@@ -55,11 +70,26 @@ module Apothecary
       end
     end
 
-    desc 'create-session SESSION-NAME environments', "Create a session"
-    def create_session(session_name, *env_names)
-      session = project.create_session(session_name, *env_names)
+    desc 'create-session SESSION-NAME', "Create a session"
+    option :environments, :type => :array, :aliases => %w[-e]
+    option :variables, :type => :hash, :aliases => %w[-D]
+    def create_session(session_name)
+      session = project.create_session(session_name,
+                                       :environments => options[:environments],
+                                       :variables => options[:variables])
 
       puts "Created session at #{session.directory_path}"
+    end
+
+    # ===== ENVIRONMENTS ===============================================================================================
+
+    desc 'create-environment ENVIRONMENT-NAME', "Create an environment"
+    option :variables, :type => :hash, :aliases => %w[-D]
+    def create_environment(environment_name)
+      session = project.create_environment(environment_name,
+                                           options[:variables])
+
+      puts "Created environment '#{environment_name}'"
     end
 
     # ===== SERVER =====================================================================================================
@@ -72,7 +102,9 @@ module Apothecary
 
     # ===== PROJECT ====================================================================================================
 
-    class_option 'project', desc: 'Path to the project. Defaults to current directory.'
+    class_option 'project',
+                 desc: 'Path to the project. Defaults to current directory.',
+                 aliases: %w[-p]
 
     protected
 
@@ -88,8 +120,12 @@ module Apothecary
       @session =
           if options[:session] == 'default' && !project.session_names.include?('default')
             project.create_session('default')
-          else
+          elsif project.session_names.include? options[:session]
             project.open_session(options[:session])
+          else
+            project.create_session(options[:session],
+                                   :environments => options[:environments],
+                                   :variables => options[:variables])
           end
     end
 
